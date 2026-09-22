@@ -34,9 +34,23 @@ Nothing in progress — see What's next.
   a pre-push audit confirmed no secrets or font binaries reached the
   remote. Flip to public only after removing the `keyps.txt` path
   references in `README.md` and `api/save-settings.js`.
+- **Deployed and verified live** — https://fontso.vercel.app. The root
+  redirects (307) to `/lab/index.html`, so `?dev=1` reaches the real
+  laboratory with all 13 dev-panel groups. Before this, the root served
+  the blank scaffold and looked as though every project setting was
+  missing. Two things are deliberately absent from the deployment and
+  are **not** faults: there are **no bundled fonts** (the binaries are
+  gitignored, so the file picker is the only way to load one there), and
+  `/api/fonts` does not exist (it belongs to `scripts/active/serve.py`).
+  `/api/save-settings` returns 500 until `GITHUB_TOKEN` and
+  `GITHUB_REPO` are set in the Vercel project's environment variables.
+  `vercel.json` must stay free of explanatory keys — Vercel rejects any
+  unrecognised top-level property and silently keeps serving the last
+  good build.
 - **Blank HTML scaffold (root)** — still present and verified, still
   unused by the lab. It holds the *other* copy of the dev panel plus the
   UI Layout Engine, which the lab does not need (one layout element).
+  Still reachable at `/index.html`; only bare `/` redirects away.
 
 ## What's next
 

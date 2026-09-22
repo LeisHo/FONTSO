@@ -106,8 +106,9 @@ as a geometry engine.
 
 ## Known gotchas
 
-These are inherited from sibling projects built on the same two systems.
-None has been re-hit here — they are recorded so nobody re-discovers them.
+Most are inherited from sibling projects built on the same two systems and
+have not been re-hit here; they are recorded so nobody re-discovers them.
+The two marked "Hit here" were hit in this project and are not theoretical.
 
 - **`registerDevControlArray()` is required, not optional cleanup.**
   Without it, a control's "Show in Mobile/Landscape" checkbox toggles,
@@ -132,6 +133,20 @@ None has been re-hit here — they are recorded so nobody re-discovers them.
   top-level keys (`devPanel`, `uiLayoutConfig`) written by different code
   paths; a blind overwrite from either silently erases the other. Any new
   top-level key needs the same discipline everywhere it is written.
+- **`vercel.json` must contain no explanatory keys.** Vercel validates it
+  against a strict schema and **fails the build on any unrecognised
+  top-level property** — and a failed build keeps serving the previous
+  deployment, so the site simply does not change and nothing in the
+  served page says why. A `_comment_redirect` array cost 16 minutes of
+  polling a deployment that was never coming. Put the rationale in
+  `README.md`'s Deployment section. (Hit here, 2026-09-22 — unlike the
+  rest of this list.)
+- **The deployment root is the blank scaffold, not the lab.** The
+  repository root holds both `index.html` (scaffold) and
+  `lab/index.html` (the project); `vercel.json` redirects `/` to the
+  latter. It must stay a **redirect, not a rewrite** — a rewrite keeps
+  the URL at `/`, so every relative path in `lab/index.html` resolves
+  against the root and 404s. (Hit here, 2026-09-22.)
 - **`python -m http.server` cannot serve this project** — it sends `.mjs`
   as `text/plain` and every engine import fails. Use `serve.py`.
 - **A local static server in the Claude Code sandbox can intermittently

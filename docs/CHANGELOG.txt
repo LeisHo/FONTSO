@@ -959,6 +959,63 @@ Verified (live, real browser, Comic Sans):
   leftmost legal entry of the leftmost letter.
 
 --------------------------------------------------------------------------------
+2026-09-22  -  6:44 AM - 7:02 AM
+
+Report: "on vercel, i dont see the settings. i just see the non project
+specific ones", with the URL https://fontso.vercel.app/?dev=1.
+
+Diagnosed, not guessed. Confirmed on the live site that the root URL was
+serving the blank workspace-standard scaffold, not the laboratory:
+title "FONTSO", groups ["Dev Panel","Debug"] only, window.fontLab
+undefined. The same deployment served the real thing correctly at
+/lab/index.html?dev=1, with all 13 groups. So nothing was broken - the
+repository root simply holds two pages and Vercel serves the root one.
+
+Fixed:
+- vercel.json redirects / to /lab/index.html. A REDIRECT, not a rewrite:
+  a rewrite keeps the URL at / while serving lab/index.html, so every
+  relative path in that page (src/app.mjs, devpanel.css,
+  test-fonts/manifest.json) would resolve against the root and 404.
+  permanent:false (307) so it can be undone without fighting browser
+  caches. The scaffold stays reachable at /index.html.
+- The font picker stopped advertising fonts it cannot load. /api/fonts is
+  an endpoint of scripts/active/serve.py and 404s on Vercel, so the
+  picker fell back to the static manifest - which is tracked while the
+  font binaries deliberately are not, so every entry 404d on selection.
+  Entries are now HEAD-probed before being offered; an empty list reads
+  'no bundled fonts - use "Load .ttf / .otf" above' and is disabled,
+  rather than going silently blank.
+- README gained a Deployment section carrying the above rationale plus
+  the two things deliberately absent from the deployment (no bundled
+  fonts, no /api/fonts), so neither is read as a fault later.
+
+Fixed, second round - the first fix did not deploy:
+- The first vercel.json carried the rationale in a _comment_redirect
+  array. Vercel validates vercel.json against a strict schema and FAILS
+  THE BUILD on any unrecognised top-level property, and a failed build
+  keeps serving the previous deployment, so the site simply did not
+  change and gave no visible sign why. Measured: 77149bc went live
+  within a minute of its push (Last-Modified 10:40:59 UTC vs a 10:40:11
+  local push); 7f596a7 was still not live 16 minutes later, polled 20
+  times; the only difference between the two commits was that file.
+  Config file is now minimal and the comments live in README. The
+  corrected commit was live 90 seconds after its push, which is what
+  confirms the earlier build was failing rather than queued.
+
+Verified (live, real browser, https://fontso.vercel.app/?dev=1):
+- Redirects 307 to /lab/index.html?dev=1, query string preserved.
+- All 13 groups present: Dev Panel, Debug, Font & Character, Text, View,
+  Layers, Path, Path Tween, Animation, Rasterisation, Skeletonisation,
+  Cleanup, Traversal. window.fontLab is an object.
+- Font picker holds exactly one disabled entry, the placeholder. Network
+  log shows 8 HEAD probes, all 404 - and, critically, no GET of a font
+  body, which is what the previous build did before failing to parse it.
+- Remaining console noise is two expected cases, both documented:
+  /api/fonts 404 (serve.py-only) and /api/save-settings 500 (refuses to
+  run without GITHUB_TOKEN / GITHUB_REPO, which are not set on this
+  Vercel project).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
