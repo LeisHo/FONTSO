@@ -1177,14 +1177,32 @@ async function populateLocalFonts(select, placeholder) {
             const resp = await fetch('test-fonts/manifest.json', { cache: 'no-store' });
             if (resp.ok) {
                 const data = await resp.json();
-                for (const f of data.fonts || []) add('test-fonts', 'test-fonts/' + f.file, f.label);
-                discovered = true;
+                // EACH ENTRY IS PROBED before being offered. The manifest
+                // is tracked in git but the font binaries are not, so on
+                // a deployment every one of them 404s. Listing fonts that
+                // cannot load is worse than listing none: the picker
+                // looks functional and then fails on selection, which
+                // reads as a broken app rather than as absent files.
+                const probes = await Promise.all((data.fonts || []).map(async (f) => {
+                    const url = 'test-fonts/' + f.file;
+                    try {
+                        const head = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+                        return head.ok ? { url, label: f.label } : null;
+                    } catch {
+                        return null;
+                    }
+                }));
+                for (const hit of probes.filter(Boolean)) add('test-fonts', hit.url, hit.label);
+                discovered = probes.some(Boolean);
             }
         } catch { /* nothing to fall back to */ }
     }
 
     if (!discovered) {
-        placeholder.textContent = 'local fonts: none found';
+        // Not an error: font binaries are intentionally not committed
+        // (licensing + repo weight), so a deployment legitimately has
+        // none. Say what to do instead of just going blank.
+        placeholder.textContent = 'no bundled fonts — use “Load .ttf / .otf” above';
         select.disabled = true;
         return;
     }
