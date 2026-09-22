@@ -153,12 +153,22 @@ to tune away.
 |---|---|---|
 | Terminals | Thinning erodes stroke ends inward, so the radius is measured short of the true tip | *Extend Terminals (Px)* |
 | Junctions | The medial axis is genuinely ambiguous where strokes meet; the inscribed circle is larger than either stroke's half-width, so the offset overshoots | *Radius Smoothing* |
-| Sharp corners | The offset self-intersects on the inner side | not repaired — a visible self-intersection is more informative than a silently clipped curve |
+| Sharp corners | The offset self-intersects on the inner side | *Join Intersecting Curves* welds an unambiguous crossing; genuinely ambiguous ones are left visible |
 | Systematically | The skeleton derives from a thresholded raster and sits a fraction inside the true outline | *Radius Scale (X)* — nudge to ~1.05 |
 
 The tween is **render-only**: the distance transform is computed once per
 pipeline run (5.2ms) and cached, so dragging any tween control re-offsets
 the existing polylines and redraws. It never re-rasterises or re-thins.
+
+**Join Intersecting Curves** welds two offset curves that cross, trimming
+the overshoot past the crossing — the mitre an offset needs at a junction.
+It fires only when a curve crosses **exactly one** other curve, and the
+pairing must be mutual. At a degree-3 junction each curve crosses two
+others and there is no single correct weld, so those are declined and
+counted (the count is in the debug JSON) rather than silently mangled.
+Measured on Comic Sans `H` at progression 1: 2 welds at the stem/crossbar
+junctions, 4 crossings declined, 10 polylines reduced to 8. At low
+progression there are no crossings yet and nothing is welded.
 
 **Animation Path** (in the Animation group) switches the dot between the
 midline and the tween geometry. On Comic Sans `H` that is a 625.6px route

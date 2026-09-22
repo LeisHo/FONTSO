@@ -79,6 +79,12 @@ export const DEFAULT_TWEEN = {
     // together they ARE the outline at progression 1. One side is
     // occasionally clearer when inspecting a single stroke.
     bothSides: true,
+
+    // Where two offset curves cross, weld them into one and discard the
+    // overshoot past the crossing — the classic mitre an offset needs at
+    // a junction. See joinIntersectingCurves() for the exact rule and
+    // why it deliberately refuses the ambiguous cases.
+    joinIntersections: true,
 };
 
 // Builds tween geometry for every segment. Cheap enough to re-run on
@@ -124,7 +130,158 @@ export function buildTween(vector, raster, distanceField, settings) {
         });
     }
 
-    return { curves, settings: s };
+    const joined = s.joinIntersections ? joinIntersectingCurves(curves) : { welds: [], skipped: 0 };
+    return { curves, settings: s, joins: joined };
+}
+
+// ====================================================================
+// Welding crossed offset curves
+// ====================================================================
+// Where two strokes meet, their offset curves cross and each overshoots
+// past the crossing into the other stroke's interior. Those overshoots
+// are the visual mess at every junction. The rule, as specified:
+//
+//   if a curve intersects EXACTLY ONE other curve, weld the two at the
+//   crossing and trim the short end
+//
+// "Exactly one" is doing real work and is not a simplification. At a
+// degree-3 junction each offset curve crosses two others, and there is
+// no single correct way to weld three curves into one — any choice
+// discards geometry the user may have wanted. Those are left untouched
+// and counted in `skipped`, so the debug panel can show how many
+// crossings were declined rather than silently mangling them.
+//
+// The pairing is required to be MUTUAL: A's only partner must be B and
+// B's only partner must be A. Without that, a curve crossed by one
+// partner that is itself crossed by three would get welded into a chain,
+// which is the ambiguous case the rule exists to avoid.
+//
+// TRIMMING: the crossing splits each curve in two. The shorter piece is
+// the overshoot, so it goes; the longer piece is the real stroke, so it
+// stays. The two survivors are then oriented to meet head-to-tail at the
+// crossing point, which is inserted exactly once.
+function joinIntersectingCurves(curves) {
+    // Flatten to individually addressable polylines. A curve's two sides
+    // are independent here: the left side of one edge can perfectly well
+    // weld to the right side of another.
+    const items = [];
+    for (let ci = 0; ci < curves.length; ci++) {
+        if (curves[ci].left && curves[ci].left.length > 1) items.push({ ci, side: 'left', pts: curves[ci].left });
+        if (curves[ci].right && curves[ci].right.length > 1) items.push({ ci, side: 'right', pts: curves[ci].right });
+    }
+
+    // Pairwise crossings. O(n^2) over polylines and O(m^2) over their
+    // segments, which is fine at these sizes (tens of curves, tens of
+    // points) and keeps the logic legible. A sweep line would be the
+    // answer if this ever ran on a whole page of text.
+    const hits = new Map(); // "i:j" -> {i, j, p, si, sj}
+    const partners = items.map(() => new Set());
+    for (let i = 0; i < items.length; i++) {
+        for (let j = i + 1; j < items.length; j++) {
+            const hit = firstIntersection(items[i].pts, items[j].pts);
+            if (!hit) continue;
+            hits.set(i + ':' + j, { i, j, ...hit });
+            partners[i].add(j);
+            partners[j].add(i);
+        }
+    }
+
+    const welds = [];
+    const consumed = new Set();
+    let skipped = 0;
+
+    for (const [, hit] of hits) {
+        const { i, j } = hit;
+        const mutual = partners[i].size === 1 && partners[j].size === 1
+            && partners[i].has(j) && partners[j].has(i);
+        if (!mutual) { skipped++; continue; }
+        if (consumed.has(i) || consumed.has(j)) { skipped++; continue; }
+
+        const a = keepLongerSide(items[i].pts, hit.si, hit.p);
+        const b = keepLongerSide(items[j].pts, hit.sj, hit.p);
+        if (!a || !b) { skipped++; continue; }
+
+        // Orient: A runs INTO the crossing, B runs OUT of it.
+        const aPts = a.endsAtCrossing ? a.pts : a.pts.slice().reverse();
+        const bPts = b.endsAtCrossing ? b.pts.slice().reverse() : b.pts;
+        welds.push({
+            from: { curve: items[i].ci, side: items[i].side },
+            to: { curve: items[j].ci, side: items[j].side },
+            at: hit.p,
+            pts: aPts.concat(bPts.slice(1)), // crossing point appears once
+        });
+        consumed.add(i);
+        consumed.add(j);
+    }
+
+    // Apply: a welded polyline replaces the FIRST of its two sources and
+    // blanks the second, so the renderer draws one continuous curve
+    // instead of two overlapping stubs.
+    for (const w of welds) {
+        const src = items.findIndex((it) => it.ci === w.from.curve && it.side === w.from.side);
+        const dst = items.findIndex((it) => it.ci === w.to.curve && it.side === w.to.side);
+        if (src < 0 || dst < 0) continue;
+        curves[items[src].ci][items[src].side] = w.pts;
+        curves[items[dst].ci][items[dst].side] = null;
+    }
+
+    return { welds: welds.map((w) => ({ from: w.from, to: w.to, at: w.at, points: w.pts.length })), skipped };
+}
+
+// Splits `pts` at crossing point p (which lies on segment index si) and
+// returns the longer piece, flagging whether that piece ENDS at the
+// crossing (true) or STARTS at it (false).
+function keepLongerSide(pts, si, p) {
+    const head = pts.slice(0, si + 1);
+    head.push({ x: p.x, y: p.y });
+    const tail = [{ x: p.x, y: p.y }].concat(pts.slice(si + 1));
+    const lenHead = polyLen(head);
+    const lenTail = polyLen(tail);
+    if (lenHead < 1e-9 && lenTail < 1e-9) return null;
+    return lenHead >= lenTail
+        ? { pts: head, endsAtCrossing: true }
+        : { pts: tail, endsAtCrossing: false };
+}
+
+function polyLen(pts) {
+    let t = 0;
+    for (let i = 1; i < pts.length; i++) t += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    return t;
+}
+
+// First true crossing between two polylines, or null.
+//
+// Adjacent-in-space endpoints are NOT treated as crossings: offset
+// curves belonging to edges that share a junction already touch at their
+// ends, and welding those would fire on essentially every pair at low
+// progression values, where nothing has actually crossed yet.
+function firstIntersection(A, B) {
+    for (let i = 0; i < A.length - 1; i++) {
+        for (let j = 0; j < B.length - 1; j++) {
+            const p = segmentIntersection(A[i], A[i + 1], B[j], B[j + 1]);
+            if (!p) continue;
+            const nearAEnd = i === 0 || i === A.length - 2;
+            const nearBEnd = j === 0 || j === B.length - 2;
+            if (nearAEnd && nearBEnd) continue; // shared junction, not a crossing
+            return { p, si: i, sj: j };
+        }
+    }
+    return null;
+}
+
+// Proper segment intersection. Strictly interior on both segments
+// (0 < t < 1) so a shared endpoint does not register.
+function segmentIntersection(p1, p2, p3, p4) {
+    const d1x = p2.x - p1.x;
+    const d1y = p2.y - p1.y;
+    const d2x = p4.x - p3.x;
+    const d2y = p4.y - p3.y;
+    const denom = d1x * d2y - d1y * d2x;
+    if (Math.abs(denom) < 1e-12) return null; // parallel or degenerate
+    const t = ((p3.x - p1.x) * d2y - (p3.y - p1.y) * d2x) / denom;
+    const u = ((p3.x - p1.x) * d1y - (p3.y - p1.y) * d1x) / denom;
+    if (t <= 1e-9 || t >= 1 - 1e-9 || u <= 1e-9 || u >= 1 - 1e-9) return null;
+    return { x: p1.x + t * d1x, y: p1.y + t * d1y };
 }
 
 // Unit normal at each point, from the local tangent. Central difference

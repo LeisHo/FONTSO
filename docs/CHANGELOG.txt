@@ -453,6 +453,71 @@ documentation -- but it does disclose a local directory layout, so it is
 worth removing if this repository is ever made public.
 
 --------------------------------------------------------------------------------
+2026-09-22  -  5:57 AM - 5:59 AM
+
+Two user-reported tween issues. The first turned out to be an input-path
+bug affecting the WHOLE panel, not the tween geometry.
+
+Fixed:
+- "Tween Progression set to 1 only goes halfway; missing 50%-100%."
+  ROOT CAUSE: the template's click-to-edit readout (S12h) commits a typed
+  value with `slider.dispatchEvent(new Event('input', {bubbles:true}))`
+  and never dispatches 'change'. app.mjs's delegated listener committed on
+  'change' only -- deliberately, so a drag would not re-run the pipeline
+  per pixel -- so a TYPED value moved the handle and updated the readout
+  but never reached state. The control stayed on its 0.5 default, which is
+  literally halfway, exactly matching the report. This affected every
+  typed slider edit in the panel, not just the tween.
+  FIX: handle both 'change' and 'input', gated on whether a pointer is
+  down inside the panel. A drag is pointer-down and stays on the
+  release-only path; a typed or synthetic commit is pointer-up and applies
+  immediately. Exact, rather than a debounce guessing at the difference.
+  Three independent pointer-release paths (pointerup / pointercancel /
+  window focus) for the same reason the template's own undo-gesture gate
+  needs them: a native colour picker never returns pointerup to the page.
+
+- NEW: weld crossed offset curves (Join Intersecting Curves On/Off,
+  default on). Where two strokes meet, their offset curves cross and each
+  overshoots into the other stroke's interior. Per the request: if a curve
+  intersects exactly one other curve, join them at the crossing and trim
+  the short end. The crossing splits each curve; the shorter piece is the
+  overshoot and is discarded, the longer is the real stroke and is kept;
+  the survivors are oriented to meet head-to-tail with the crossing point
+  inserted once. The pairing must be MUTUAL (A's only partner is B and B's
+  only partner is A) -- without that, a curve whose partner is itself
+  crossed three times would be welded into a chain, which is the ambiguous
+  case the rule exists to avoid. Declined crossings are counted, not
+  hidden. Shared junction ENDPOINTS are explicitly not treated as
+  crossings, or every pair would weld at low progression where nothing has
+  actually crossed.
+
+Verified (live, real browser):
+- Reproduced the reported bug exactly before fixing: state sat at 0.5
+  while the slider read 1. After the fix a click-to-edit style
+  input-only commit drives state to 1.
+- Pointer gate proven on all three paths: typed commit applies (0.2),
+  mid-drag input does NOT commit (stays 0.2 while the slider reads 0.9),
+  release commits (0.9).
+- Weld pass on Comic Sans H at progression 1: 2 welds (e0.left+e1.right at
+  (162,108) and e3.left+e4.right at (7,121) -- the two stem/crossbar
+  junctions), 4 crossings correctly declined as ambiguous, 10 polylines
+  reduced to 8. At progression 0.3: 0 welds, confirming shared junction
+  endpoints are not mistaken for crossings. Screenshot confirms clean
+  mitres at the junctions.
+
+Correction to an earlier entry:
+- This session's tween entry claimed progression=1 was verified as
+  "12.00px at a stem centre against a ~24px stem -- exactly half". The
+  stem width was never measured; it was inferred FROM the distance-
+  transform value and then used to confirm that same value. That check
+  was circular and could not have detected a factor-of-two error. Re-done
+  properly this time by marching along the local normal until leaving the
+  mask: median ratio of DT to true half-thickness is 0.98 across 9 samples
+  on 3 edges, and at progression 1 the offset curve sits 0-1px from the
+  nearest mask edge pixel. The geometry was in fact correct; the earlier
+  verification simply did not establish it.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

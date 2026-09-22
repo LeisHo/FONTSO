@@ -425,19 +425,51 @@ function setupDelegatedConfigWiring() {
         rerun();
     };
 
-    // 'change' fires on pointer release for a range input, not on every
-    // pixel of a drag. A full pipeline pass at 512px is far too slow to
-    // run per-pixel; the numeric readout still updates live, because the
-    // template's own click-to-edit machinery handles that on 'input'.
+    // WHY BOTH 'change' AND 'input' ARE HANDLED, and why a pointer gate
+    // sits between them.
+    //
+    // 'change' alone is not sufficient. The template's click-to-edit
+    // readout (§12h: click a slider's number, type a value) commits with
+    //     slider.dispatchEvent(new Event('input', { bubbles: true }))
+    // and NEVER dispatches 'change'. A listener bound only to 'change'
+    // therefore misses every typed value: the handle moves, the readout
+    // updates, and the underlying state silently keeps its previous
+    // value. Reported as "I set Tween Progression to 1 but it only goes
+    // halfway" — halfway being precisely that control's 0.5 default,
+    // which is what it was still sitting on. This affected EVERY typed
+    // slider edit in the panel, not just the tween.
+    //
+    // 'input' alone is not acceptable either: a range drag emits one per
+    // pixel, and a full pipeline pass at 512px raster cannot run at that
+    // rate.
+    //
+    // So: 'change' always commits, and 'input' commits only when no
+    // pointer is down inside the panel. A drag is pointer-down, so it
+    // stays on the release-only path; a typed commit and any synthetic
+    // dispatch are pointer-up, so they apply immediately. Exact, rather
+    // than a debounce that would guess at the difference.
+    let pointerDownInPanel = false;
+    panel.addEventListener('pointerdown', () => { pointerDownInPanel = true; });
+    // Three independent release paths, for the same reason the template's
+    // own undo-gesture gate needs them: a native colour picker never
+    // delivers pointerup back to the page (the OS dialog eats it), which
+    // would otherwise strand the gate closed and silently kill typed
+    // edits for the rest of the session.
+    const releasePointer = () => { pointerDownInPanel = false; };
+    window.addEventListener('pointerup', releasePointer);
+    window.addEventListener('pointercancel', releasePointer);
+    window.addEventListener('focus', releasePointer);
+
     panel.addEventListener('change', (e) => {
         if (e.target && e.target.matches('input, select')) apply(e.target);
     });
-    // A colour picker emits 'input' continuously while the user drags
-    // inside it and 'change' only on commit. Redrawing is cheap (no
-    // pipeline re-run), so the live feedback is worth having — and it is
-    // scoped to colour inputs so a range slider still waits for release.
     panel.addEventListener('input', (e) => {
-        if (e.target && e.target.type === 'color') apply(e.target);
+        if (!e.target || !e.target.matches('input, select')) return;
+        // A colour picker emits 'input' continuously while open and is
+        // cheap to apply (no pipeline re-run), so it is always live.
+        if (e.target.type === 'color') { apply(e.target); return; }
+        if (pointerDownInPanel) return; // mid-drag: wait for 'change'
+        apply(e.target);
     });
 }
 
@@ -550,6 +582,10 @@ function buildTweenGroup() {
             id: 'checkboxTweenBothSides', type: 'checkbox',
             label: 'Both Sides On/Off', value: state.tween.bothSides,
         }),
+        addRow(GROUPS.TWEEN, {
+            id: 'checkboxTweenJoinIntersections', type: 'checkbox',
+            label: 'Join Intersecting Curves On/Off', value: state.tween.joinIntersections,
+        }),
     ];
     window.renderControlArray(controls, 'buildTweenGroup');
 }
@@ -565,6 +601,7 @@ const TWEEN_BY_CONTROL_ID = {
     sliderTweenResampleSpacing: 'resampleSpacingPx',
     sliderTweenExtendTerminals: 'extendTerminalsPx',
     checkboxTweenBothSides: 'bothSides',
+    checkboxTweenJoinIntersections: 'joinIntersections',
 };
 
 // Re-offsets the existing centrelines against the cached distance field.

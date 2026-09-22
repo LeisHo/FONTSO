@@ -48,7 +48,7 @@ THE LABORATORY (lab/) -- the live project.
   stroke is around it). Approximate chamfer DTs were rejected: their
   error is direction-dependent and would show as the tween drifting off
   the outline on diagonals but not on stems.
-- `lab/src/tween.mjs` -- centreline -> outline morph. Two offset curves
+- `lab/src/tween.mjs` -- centreline -> outline morph, plus the weld pass that joins crossed offset curves at junctions. Two offset curves
   per skeleton edge at progression x radius, plus the fine-tuning
   (radius scale/smoothing, normal smoothing, resampling, terminal
   extension) and the animation route built from the tween geometry.
@@ -148,6 +148,15 @@ GOTCHAS
   delegated listener routes each control id to the right one via
   CONFIG_BY_CONTROL_ID / VIEW_BY_CONTROL_ID. Putting a render setting in
   the wrong map costs a full pipeline re-run per slider tick.
+- The template's click-to-edit readout (S12h) commits a typed value with
+  `slider.dispatchEvent(new Event('input', {bubbles:true}))` and NEVER
+  dispatches 'change'. A delegated listener bound only to 'change'
+  therefore misses every TYPED slider edit: the handle moves, the readout
+  updates, and the state silently keeps its old value. This shipped, and
+  surfaced as "I set Tween Progression to 1 but it only goes halfway" --
+  halfway being that control's 0.5 default, which it was still on. Handle
+  BOTH events, gated on whether a pointer is down in the panel (drag =>
+  wait for 'change'; typed/synthetic => apply immediately).
 - Dev-panel config controls are wired by ONE DELEGATED listener on
   #devPanel, never per element. A Mobile/Landscape twin is created only
   when its checkbox is ticked, long after wire-up, so per-element
