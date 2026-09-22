@@ -172,6 +172,18 @@ export const DEFAULT_CONFIG = {
     // an 'O' is a single ring with none anywhere.
     tweenEntryAtEndpoints: true,
 
+    // Penalty per pixel of LEFTWARD movement when choosing the next
+    // curve, added to the travel distance. 0 = pure nearest-neighbour,
+    // which is free to zig-zag backwards; higher sweeps left to right.
+    // Rightward and vertical hops are never penalised.
+    rightwardBias: 1.5,
+
+    // Finish every curve of one letter before starting the next, with
+    // letters ordered by line and then left edge. This is what actually
+    // produces a reading order; the bias above only shapes the order
+    // WITHIN a letter.
+    groupByLetter: true,
+
     nearestRouting: true,
 
     emitConnectors: true,
@@ -206,6 +218,8 @@ export const CONFIG_META = {
     useKerning: { label: 'Use Kerning', unit: 'bool', note: 'Off = raw advance widths, ignoring the kern table.' },
     letterSpacingUnits: { label: 'Letter Spacing', unit: 'font units', min: -400, max: 800, step: 10, note: 'Font units, so it scales with the em. Negative tightens.' },
     tweenEntryAtEndpoints: { label: 'Tween Entry At Endpoints', unit: 'bool', note: 'Off allows mid-curve entry, which splits a curve into two runs.' },
+    rightwardBias: { label: 'Rightward Bias', unit: 'x per px', min: 0, max: 6, step: 0.1, note: '0 = pure nearest (can zig-zag back); higher sweeps left to right.' },
+    groupByLetter: { label: 'Group By Letter', unit: 'bool', note: 'Finish one letter before starting the next.' },
     nearestRouting: { label: 'Nearest-Curve Routing', unit: 'bool', note: 'Off = fixed reading order, which can hop across the whole glyph.' },
     emitConnectors: { label: 'Emit connectors', unit: 'bool', note: 'Pen-up moves between segments.' },
     traversalResampleSpacingPx: { label: 'Traversal resample spacing', unit: 'px', min: 0, max: 10, step: 0.5, note: '0 = uneven animation speed.' },

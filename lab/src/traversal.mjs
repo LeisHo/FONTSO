@@ -72,9 +72,17 @@ export function buildTraversal(vector, config) {
         let pickIdx = 0;
         if (config.nearestRouting !== false && cursor) {
             let bestD = Infinity;
+            // Same directional cost as the tween router: only leftward
+            // movement is penalised, so the pen sweeps rightwards across
+            // a word instead of doubling back between letters.
+            const bias = config.rightwardBias || 0;
             for (let i = 0; i < pending.length; i++) {
                 const n = nearestNodeInComponent(pending[i], nodeById, segById, cursor);
-                if (n && n.distance < bestD) { bestD = n.distance; pickIdx = i; }
+                if (!n) continue;
+                const node = nodeById.get(n.nodeId);
+                const leftward = node ? Math.max(0, cursor.x - node.xPx) : 0;
+                const cost = n.distance + bias * leftward;
+                if (cost < bestD) { bestD = cost; pickIdx = i; }
             }
         }
         const comp = pending.splice(pickIdx, 1)[0];
@@ -243,7 +251,8 @@ function chooseStartNode(comp, nodeById, segById) {
     const pool = endpoints.length ? endpoints : compNodes;
     let best = pool[0];
     for (const n of pool) {
-        if (n.yPx < best.yPx - 1 || (Math.abs(n.yPx - best.yPx) <= 1 && n.xPx < best.xPx)) best = n;
+        // Leftmost, tie-broken topmost: text is written left to right.
+        if (n.xPx < best.xPx - 1 || (Math.abs(n.xPx - best.xPx) <= 1 && n.yPx < best.yPx)) best = n;
     }
     return best.id;
 }

@@ -167,7 +167,84 @@ export function loopEntryCandidates(pts, anchors) {
 // (see closestEndEntry); 'nearest' allows any point, splitting the curve
 // into two runs when that point is interior. loopAnchors supplies the
 // midline endpoints used to place a closed curve's start.
-export function routeNearest(curves, from = null, { entryMode = 'nearest', loopAnchors = [] } = {}) {
+export function routeNearest(curves, from = null, {
+    entryMode = 'nearest', loopAnchors = [], rightwardBias = 0, groupByLetter = true,
+} = {}) {
+    // LETTER GROUPING comes first, because it is what actually produces a
+    // left-to-right reading order. Nearest-neighbour alone is free to
+    // hop between letters and come back, which looks wrong for text even
+    // when every individual hop is genuinely the shortest one.
+    //
+    // Curves are bucketed by the glyph they belong to, buckets are
+    // ordered by line and then by left edge, and the pen finishes a
+    // letter before moving on. Within a letter, nearest-neighbour still
+    // decides the order, so the travel optimisation is kept exactly
+    // where it helps and dropped exactly where it hurts.
+    if (groupByLetter && curves.some((c) => c.letter !== undefined && c.letter !== null)) {
+        const buckets = new Map();
+        for (const c of curves) {
+            const key = c.letter === undefined || c.letter === null ? '~' : c.letter;
+            if (!buckets.has(key)) buckets.set(key, []);
+            buckets.get(key).push(c);
+        }
+        // Ordered by the glyph's own READING-ORDER INDEX, not by
+        // geometry. The layout stage already placed the glyphs in
+        // reading order, including line breaks, so that index is the
+        // exact answer; deriving it back from coordinates is both
+        // redundant and fragile.
+        //
+        // It also fixes a real bug. The previous version sorted by
+        // position with a per-letter vertical tolerance, which made the
+        // comparator INCONSISTENT: comparing A to B used A's tolerance
+        // and B to A used B's, so a tall letter and a short one could
+        // each claim to come first. Array.sort on an inconsistent
+        // comparator gives an arbitrary order, and it did - on wrapped
+        // text 'the quick brown fox' the letters came out
+        // 0,1,2,3,4,7,5,6,8..., drawing 'k' before 'i' and 'c'.
+        //
+        // Curves with no letter (the '~' bucket) sort last, since there
+        // is nothing to place them relative to.
+        const ordered = [...buckets.entries()].sort((a, b) => {
+            const A = a[0] === '~' ? Infinity : Number(a[0]);
+            const B = b[0] === '~' ? Infinity : Number(b[0]);
+            if (A !== B) return A - B;
+            return letterOrigin(a[1]).x - letterOrigin(b[1]).x;
+        });
+        const out = [];
+        let pen = from;
+        for (const [, group] of ordered) {
+            const sub = routeNearest(group, pen, {
+                entryMode, loopAnchors, rightwardBias, groupByLetter: false,
+            });
+            for (const e of sub) out.push(e);
+            if (sub.length) {
+                const lastRuns = sub[sub.length - 1].runs;
+                const lastRun = lastRuns[lastRuns.length - 1];
+                pen = lastRun[lastRun.length - 1];
+            }
+        }
+        return out;
+    }
+    return routeWithin(curves, from, { entryMode, loopAnchors, rightwardBias });
+}
+
+// Top-left corner of a letter's curves, plus a vertical tolerance for
+// deciding whether two letters share a line.
+function letterOrigin(group) {
+    let x = Infinity;
+    let y = Infinity;
+    let maxY = -Infinity;
+    for (const c of group) {
+        for (const p of c.pts) {
+            if (p.x < x) x = p.x;
+            if (p.y < y) y = p.y;
+            if (p.y > maxY) maxY = p.y;
+        }
+    }
+    return { x, y, lineTol: Math.max(8, (maxY - y) * 0.6) };
+}
+
+function routeWithin(curves, from = null, { entryMode = 'nearest', loopAnchors = [], rightwardBias = 0 } = {}) {
     const remaining = curves.map((c, i) => ({ ...c, _i: i })).filter((c) => c.pts && c.pts.length > 1);
     const out = [];
     let pen = from;
@@ -208,29 +285,44 @@ export function routeNearest(curves, from = null, { entryMode = 'nearest', loopA
         };
 
         if (pen) {
-            let bestD = Infinity;
+            // COST, not raw distance. Pure nearest-neighbour is free to
+            // zig-zag backwards; the penalty applies ONLY to leftward
+            // movement and scales with how far left the hop goes. A
+            // rightward or vertical hop is never penalised, so this does
+            // not inflate travel where direction does not matter.
+            //   bias 0    -> pure nearest (previous behaviour)
+            //   bias high -> approaches a strict left-to-right sweep
+            let bestCost = Infinity;
             for (let i = 0; i < remaining.length; i++) {
                 for (const cand of candidatesFor(remaining[i])) {
                     const travel = dist(pen, cand.point);
-                    if (travel < bestD) { bestD = travel; pick = i; pickHit = { ...cand, travel }; }
+                    const leftward = Math.max(0, pen.x - cand.point.x);
+                    const cost = travel + rightwardBias * leftward;
+                    if (cost < bestCost) { bestCost = cost; pick = i; pickHit = { ...cand, travel }; }
                 }
             }
         } else {
-            // Deterministic cold start: topmost-leftmost first point, so
-            // a run is reproducible rather than depending on array order.
+            // Cold start: the LEFTMOST admissible entry, tie-broken
+            // topmost. Text is written left to right, so that is where
+            // the pen starts.
+            //
+            // Ranked over every ADMISSIBLE ENTRY rather than each curve's
+            // pts[0]. pts[0] is an arbitrary vertex - for a welded or
+            // reversed curve it can sit at the right-hand end - so
+            // ranking by it chose a start that was neither leftmost nor
+            // a legal entry point. Loops therefore still honour their
+            // own rule here, since their candidates are the only ones
+            // offered.
             let bestKey = Infinity;
+            let bestCand = null;
             for (let i = 0; i < remaining.length; i++) {
-                const p = remaining[i].pts[0];
-                const key = p.y * 10000 + p.x;
-                if (key < bestKey) { bestKey = key; pick = i; }
+                for (const cand of candidatesFor(remaining[i])) {
+                    const key = cand.point.x * 10000 + cand.point.y;
+                    if (key < bestKey) { bestKey = key; pick = i; bestCand = cand; }
+                }
             }
-            // Cold start still honours the loop rule, so a glyph whose
-            // first curve is a ring does not begin at an arbitrary vertex.
-            // Cold start still honours the loop rule, so a glyph whose
-            // first curve is a ring does not begin at an arbitrary vertex.
-            const cands = candidatesFor(remaining[pick]);
-            pickHit = isClosed(remaining[pick], remaining[pick].pts) && cands.length
-                ? { ...cands[0], travel: 0 }
+            pickHit = bestCand
+                ? { ...bestCand, travel: 0 }
                 : { index: 0, travel: 0, point: remaining[pick].pts[0], rule: 'cold-start' };
         }
 

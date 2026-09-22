@@ -24,12 +24,53 @@ import { polylineLength } from './skeletonGraph.mjs';
 export function vectorizeGraph(graph, rasterResult, glyphData) {
     const { toFont } = rasterResult.transform;
 
+    // Which glyph does each segment belong to? Needed so the animation
+    // can finish one letter before starting the next.
+    //
+    // Assigned in FONT UNITS against each glyph's own pen position and
+    // advance width, which is the authoritative layout the extractor
+    // already produced — far more reliable than trying to re-derive
+    // letter boundaries from clusters of raster pixels, which would
+    // merge any two letters whose ink happens to touch.
+    const glyphBoxes = (glyphData.glyphs || [])
+        .filter((g) => g.hasOutline)
+        .map((g, i) => ({
+            i,
+            char: g.char,
+            x0: g.penX,
+            x1: g.penX + (g.advanceWidth || 0),
+            y: g.penY || 0,
+        }));
+
+    const assignLetter = (pointsFontUnits) => {
+        if (!glyphBoxes.length || !pointsFontUnits.length) return null;
+        let sx = 0;
+        let sy = 0;
+        for (const p of pointsFontUnits) { sx += p.x; sy += p.y; }
+        const cx = sx / pointsFontUnits.length;
+        const cy = sy / pointsFontUnits.length;
+        let best = null;
+        for (const b of glyphBoxes) {
+            // Horizontal distance to the advance interval (0 when
+            // inside it), plus vertical distance to the baseline. The
+            // vertical term is what keeps wrapped lines apart.
+            const dx = cx < b.x0 ? b.x0 - cx : (cx > b.x1 ? cx - b.x1 : 0);
+            const dy = Math.abs(cy - b.y);
+            const d = dx + dy;
+            if (!best || d < best.d) best = { d, i: b.i, char: b.char };
+        }
+        return best;
+    };
+
     const segments = graph.edges.map((edge) => {
         const pointsPx = edge.pointsPx;
         const points = pointsPx.map((p) => toFont(p.x, p.y));
+        const letter = assignLetter(points);
         return {
             id: edge.id,
             edgeId: edge.id,
+            letterIndex: letter ? letter.i : null,
+            letterChar: letter ? letter.char : null,
             nodeA: edge.a,
             nodeB: edge.b,
             isLoop: !!edge.isLoop,

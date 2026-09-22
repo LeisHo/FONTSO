@@ -900,6 +900,65 @@ Two wrong turns worth recording, both caught by measuring:
   vertex -- the true entry -- gives exactly 0 excess.
 
 --------------------------------------------------------------------------------
+2026-09-22  -  6:36 AM - 6:40 AM
+
+Three related requests, arriving during the work: start the animation
+from the left, move rightwards, and finish each letter before moving to
+the next.
+
+Added -- letter grouping, which is what actually delivers all three:
+- vectorize.mjs assigns every segment to the glyph it belongs to, in
+  FONT UNITS, against that glyph's own pen position and advance width.
+  That is the authoritative layout the extractor already produced;
+  deriving letter boundaries from clusters of raster pixels would merge
+  any two letters whose ink happens to touch.
+- routing.mjs buckets curves by letter, finishes a bucket before moving
+  on, and orders buckets by READING-ORDER INDEX. Within a letter,
+  nearest-neighbour still chooses the order, so the travel optimisation
+  is kept where it helps and dropped where it hurt.
+- Cold start is now the LEFTMOST ADMISSIBLE ENTRY, tie-broken topmost -
+  ranked over admissible entries rather than each curve's pts[0], which
+  is an arbitrary vertex that can sit at the right-hand end of a welded
+  or reversed curve.
+- Rightward Bias: a penalty per pixel of LEFTWARD movement added to the
+  travel cost when choosing the next curve. 0 is pure nearest-neighbour
+  (free to zig-zag back); higher approaches a strict sweep. Rightward
+  and vertical hops are never penalised, so it does not inflate travel
+  where direction is irrelevant. Applied to the midline traversal's
+  component choice as well. Default 1.5.
+- Group By Letter and Rightward Bias are both controls in the Traversal
+  group.
+
+Fixed:
+- The first implementation ordered letter buckets by POSITION, using a
+  vertical tolerance derived from each letter's own bounding box. That
+  made the comparator INCONSISTENT - comparing A to B used A's
+  tolerance while B to A used B's - and Array.sort on an inconsistent
+  comparator produces an arbitrary order. Measured on wrapped 'the
+  quick brown fox': letters came out 0,1,2,3,4,7,5,6,8..., drawing 'k'
+  before 'i' and 'c'. Replaced with the glyph's reading-order index,
+  which the layout stage already knows exactly, so no geometry is
+  involved and no tolerance is needed.
+- Removed a duplicated comment block in routing.mjs left behind by the
+  previous change.
+
+Verified (live, real browser, Comic Sans):
+- Letter sequences are strictly monotonic with ZERO revisits on
+  'Hello' [0,1,2,3,4], 'geode' [0,1,2,3,4], 'WOW' [0,1,2] and a wrapped
+  16-letter 'the quick brown fox' [0..15]. Before the ordering fix the
+  wrapped case was [0,1,2,3,4,7,5,6,8,...].
+- 'Hello' starts at x=7.8, which is the leftmost point of all its
+  geometry. Pen-up travel 654 -> 544px; wrapped 1673 -> 1555px.
+- NOTE on "starts at the leftmost point": for some letters the first
+  drawn point is not the leftmost pixel of the glyph - e.g. 'Bag' starts
+  at x=71.1 while its leftmost ink is x=8.2. That is correct, not a
+  defect: entry is restricted to ADMISSIBLE points (a curve's ends, or a
+  loop's midline-endpoint candidates), and the leftmost ink of a 'B'
+  stem is mid-curve, which entering at would violate the
+  endpoints-only rule requested earlier. The animation starts at the
+  leftmost legal entry of the leftmost letter.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

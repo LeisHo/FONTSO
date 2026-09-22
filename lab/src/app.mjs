@@ -128,7 +128,7 @@ const CONFIG_GROUPS = [
         'mergeAdjacentJunctions', 'simplifyTolerancePx', 'smoothingPasses', 'smoothingStrength',
         'preserveEndpointsWhileSmoothing',
     ]],
-    [GROUPS.TRAVERSAL, ['nearestRouting', 'tweenEntryAtEndpoints', 'emitConnectors', 'traversalResampleSpacingPx']],
+    [GROUPS.TRAVERSAL, ['nearestRouting', 'groupByLetter', 'rightwardBias', 'tweenEntryAtEndpoints', 'emitConnectors', 'traversalResampleSpacingPx']],
 ];
 
 const LAB_CONTROLS = [];
@@ -684,6 +684,14 @@ function applyAnimationRoute() {
             nearestRouting: state.config.nearestRouting,
             entryMode: state.config.tweenEntryAtEndpoints === false ? 'nearest' : 'endpoints',
             loopAnchors: midlineEndpoints,
+            rightwardBias: state.config.rightwardBias,
+            groupByLetter: state.config.groupByLetter !== false,
+            // Tween curves inherit their letter from the skeleton edge
+            // they were offset from.
+            letterOf: (edgeId) => {
+                const seg = r.vector.segments.find((x) => x.id === edgeId);
+                return seg ? seg.letterIndex : null;
+            },
         })
         : r.traversal.animation);
     // Preserve position proportionally so switching source mid-run does

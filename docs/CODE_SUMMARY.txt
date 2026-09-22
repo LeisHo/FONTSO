@@ -195,6 +195,16 @@ GOTCHAS
   halfway being that control's 0.5 default, which it was still on. Handle
   BOTH events, gated on whether a pointer is down in the panel (drag =>
   wait for 'change'; typed/synthetic => apply immediately).
+- Letter buckets are ordered by the glyph's READING-ORDER INDEX, never
+  by geometry. An earlier version sorted by position using a per-letter
+  vertical tolerance, which made the comparator inconsistent (A-vs-B
+  used A's tolerance, B-vs-A used B's) and Array.sort then produced an
+  arbitrary order - measured: wrapped text drew 'k' before 'i' and 'c'.
+  The layout stage already knows reading order; do not re-derive it.
+- Each segment's letter is assigned in FONT UNITS against the glyph's
+  pen position and advance width (vectorize.mjs). Deriving letter
+  boundaries from raster pixel clusters would merge any two letters
+  whose ink happens to touch.
 - routing.mjs keeps "which curve next" and "where do I enter it"
   SEPARATE. Each curve proposes admissible entry points; selection is
   always pen-to-entry travel. Letting an entry rule's own distance

@@ -297,6 +297,23 @@ the hop to reach it is the shortest available. When a glyph has no
 midline endpoints at all (an `O` is one ring with none), every vertex is
 admissible and the nearest to the pen wins.
 
+**Letters are drawn one at a time, left to right.** Every curve is
+assigned to the glyph it belongs to (in font units, against that
+glyph's own pen position and advance width — not re-derived from pixel
+clusters, which would merge letters whose ink touches). The router
+finishes a letter before starting the next, and orders letters by their
+**reading-order index**, which the layout stage already produced. The
+animation starts at the leftmost admissible entry of the first letter.
+
+Within a letter, nearest-neighbour still chooses the order, so the
+travel optimisation is kept where it helps and dropped where it hurt.
+A **Rightward Bias** penalises only leftward hops (0 = pure nearest,
+higher = stricter sweep), which shapes the order inside a letter.
+
+Measured on Comic Sans: `Hello`, `geode`, `WOW` and a wrapped 16-letter
+`the quick brown fox` all produce a strictly monotonic letter sequence
+with **zero revisits**.
+
 **Selection and entry are separate decisions.** Each curve proposes a
 set of admissible entry points (its two ends, or its loop candidates);
 the router then chooses the (curve, entry) pair with the shortest hop

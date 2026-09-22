@@ -522,20 +522,28 @@ function unit(a, b) {
 // jump between them is marked 'connector' exactly as the real traversal
 // marks a pen-up, so the animator's own on:draw / on:connector readout
 // stays meaningful and the dot does not appear to teleport unexplained.
-export function tweenAnimationRoute(tween, { nearestRouting = true, entryMode = 'endpoints', loopAnchors = [] } = {}) {
+export function tweenAnimationRoute(tween, {
+    nearestRouting = true, entryMode = 'endpoints', loopAnchors = [],
+    rightwardBias = 0, groupByLetter = true, letterOf = null,
+} = {}) {
     const items = [];
     for (const c of tween.curves) {
         // `closed` comes from the skeleton edge, not from comparing the
         // curve's own endpoints - see isClosedPolyline's note on why a
         // coordinate test gets this wrong after smoothing.
-        if (c.left && c.left.length > 1) items.push({ id: `${c.edgeId}:left`, pts: c.left, closed: !!c.isLoop });
-        if (c.right && c.right.length > 1) items.push({ id: `${c.edgeId}:right`, pts: c.right, closed: !!c.isLoop });
+        // `letter` lets the router finish one glyph before the next;
+        // `closed` comes from the skeleton edge, not from comparing the
+        // curve's own endpoints - see isClosedPolyline's note on why a
+        // coordinate test gets that wrong after smoothing.
+        const letter = letterOf ? letterOf(c.edgeId) : null;
+        if (c.left && c.left.length > 1) items.push({ id: `${c.edgeId}:left`, pts: c.left, closed: !!c.isLoop, letter });
+        if (c.right && c.right.length > 1) items.push({ id: `${c.edgeId}:right`, pts: c.right, closed: !!c.isLoop, letter });
     }
 
     // Two orderings, so the nearest-neighbour result can be compared
     // against the naive one rather than taken on faith.
     const ordered = nearestRouting
-        ? routeNearest(items, null, { entryMode, loopAnchors })
+        ? routeNearest(items, null, { entryMode, loopAnchors, rightwardBias, groupByLetter })
         : items.map((it) => ({ id: it.id, runs: [it.pts], entryDistance: 0 }));
 
     const flat = [];
