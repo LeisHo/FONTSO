@@ -115,7 +115,7 @@ const LAYER_LABELS = {
 // Config keys grouped for display, with the unit suffix §12n requires in
 // every label. Order within a group is pipeline order, not alphabetical.
 const CONFIG_GROUPS = [
-    [GROUPS.RASTER, ['rasterEmHeight', 'rasterPadding', 'alphaThreshold']],
+    [GROUPS.RASTER, ['rasterPadding', 'alphaThreshold']],
     [GROUPS.SKEL, ['thinningAlgorithm', 'removeRedundantPixels', 'maxThinningIterations']],
     [GROUPS.CLEANUP, [
         'removeIsolatedPixels', 'minSourceAreaPx', 'minBranchLengthPx', 'pruneIterations',
@@ -215,7 +215,6 @@ function buildFontGroup() {
         input.type = 'text';
         input.className = 'dev-text-input';
         input.value = state.text.length === 1 ? state.text : '';
-        input.maxLength = 2;
         input.style.width = '48px';
         input.style.textAlign = 'center';
         input.addEventListener('change', () => setText(input.value, input));
@@ -707,6 +706,18 @@ function buildTextGroup() {
 
     const controls = [
         addRow(GROUPS.TEXT, {
+            id: 'sliderRasterEmHeight', type: 'slider', label: 'Font Size (Px)',
+            min: 64, max: 512, step: 16, value: state.config.rasterEmHeight,
+        }),
+        addRow(GROUPS.TEXT, {
+            id: 'sliderWrapWidthPx', type: 'slider', label: 'Wrap Width (Px)',
+            min: 0, max: 4000, step: 50, value: state.config.wrapWidthPx,
+        }),
+        addRow(GROUPS.TEXT, {
+            id: 'sliderLineHeightEm', type: 'slider', label: 'Line Height (Em)',
+            min: 0.6, max: 3, step: 0.05, value: state.config.lineHeightEm,
+        }),
+        addRow(GROUPS.TEXT, {
             id: 'checkboxUseKerning', type: 'checkbox',
             label: 'Use Kerning', value: state.config.useKerning,
         }),
@@ -715,6 +726,9 @@ function buildTextGroup() {
             min: -400, max: 800, step: 10, value: state.config.letterSpacingUnits,
         }),
     ];
+    CONFIG_BY_CONTROL_ID.sliderRasterEmHeight = 'rasterEmHeight';
+    CONFIG_BY_CONTROL_ID.sliderWrapWidthPx = 'wrapWidthPx';
+    CONFIG_BY_CONTROL_ID.sliderLineHeightEm = 'lineHeightEm';
     CONFIG_BY_CONTROL_ID.checkboxUseKerning = 'useKerning';
     CONFIG_BY_CONTROL_ID.sliderLetterSpacingUnits = 'letterSpacingUnits';
     window.renderControlArray(controls, 'buildTextGroup');
@@ -1061,24 +1075,65 @@ function adoptFont(font, info) {
     rerun();
 }
 
-// Convenience only. The manifest is tracked but the font files are not
-// (they are OS faces copied in locally), so this degrades quietly rather
-// than erroring when the folder is empty on another machine — the file
-// picker is always the real entry point.
+// Populates the font picker from every font folder the server can see.
+//
+// PREFERS AUTO-DISCOVERY (/api/fonts, implemented in serve.py) over a
+// checked-in manifest, because a hand-maintained list is exactly the
+// thing that goes stale the first time a font is dropped into the folder
+// and nobody updates it. The static manifests remain as a fallback for
+// a deployment where serve.py is not the server.
+//
+// Degrades quietly to the file picker, which is always the real entry
+// point: the font binaries are not committed, so an empty list is the
+// normal state on another machine rather than a failure.
 async function populateLocalFonts(select, placeholder) {
+    const groups = new Map();
+    const add = (groupLabel, value, text) => {
+        if (!groups.has(groupLabel)) groups.set(groupLabel, []);
+        groups.get(groupLabel).push({ value, text });
+    };
+
+    let discovered = false;
     try {
-        const resp = await fetch('test-fonts/manifest.json', { cache: 'no-store' });
-        if (!resp.ok) throw new Error('no manifest');
-        const data = await resp.json();
-        for (const f of data.fonts || []) {
-            const opt = document.createElement('option');
-            opt.value = 'test-fonts/' + f.file;
-            opt.textContent = f.label;
-            select.appendChild(opt);
+        const resp = await fetch('/api/fonts', { cache: 'no-store' });
+        if (resp.ok) {
+            const data = await resp.json();
+            for (const f of (data && data.fonts) || []) {
+                add(f.group, '/' + f.path, `${f.fileName}  (${Math.round(f.size / 1024)}KB)`);
+                discovered = true;
+            }
         }
     } catch {
-        placeholder.textContent = 'local test fonts: none found';
+        // No discovery endpoint (a plain static host) — fall through.
+    }
+
+    if (!discovered) {
+        try {
+            const resp = await fetch('test-fonts/manifest.json', { cache: 'no-store' });
+            if (resp.ok) {
+                const data = await resp.json();
+                for (const f of data.fonts || []) add('test-fonts', 'test-fonts/' + f.file, f.label);
+                discovered = true;
+            }
+        } catch { /* nothing to fall back to */ }
+    }
+
+    if (!discovered) {
+        placeholder.textContent = 'local fonts: none found';
         select.disabled = true;
+        return;
+    }
+
+    for (const [label, entries] of groups) {
+        const og = document.createElement('optgroup');
+        og.label = label;
+        for (const e of entries) {
+            const opt = document.createElement('option');
+            opt.value = e.value;
+            opt.textContent = e.text;
+            og.appendChild(opt);
+        }
+        select.appendChild(og);
     }
 }
 
@@ -1164,7 +1219,7 @@ function renderReport(result) {
     }
     const r = result;
     const rows = [
-        ['text', `"${r.glyph.text}" · ${r.glyph.glyphCount} glyph(s) · ${r.glyph.contourCount} contour(s)`],
+        ['text', `"${r.glyph.text.length > 24 ? r.glyph.text.slice(0, 24) + '…' : r.glyph.text}" · ${r.glyph.glyphCount} glyph(s) · ${r.glyph.lineCount} line(s) · ${r.glyph.contourCount} contour(s)`],
         ['raster', `${r.raster.width}x${r.raster.height} px · ${r.raster.filledPixels} filled (${(r.raster.fillRatio * 100).toFixed(1)}%)`],
         ['thinning', `${r.thin.algorithm} · ${r.thin.iterations} iters · ${r.thin.converged ? 'converged' : 'CAPPED'} · ${r.thin.skeletonPixels} px`],
         ['graph raw', `${r.graphBeforeCleanup.nodeCount} nodes, ${r.graphBeforeCleanup.edgeCount} edges, ${r.graphBeforeCleanup.componentCount} comp`],

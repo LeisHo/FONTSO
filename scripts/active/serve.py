@@ -146,7 +146,42 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def _is_api(self):
         return self.path.split('?')[0].rstrip('/') == '/api/save-settings'
 
+    def _is_font_list(self):
+        return self.path.split('?')[0].rstrip('/') == '/api/fonts'
+
+    # Directory listing of the font folders, so a face dropped into
+    # data/Fonts/ appears in the picker with no manifest to maintain.
+    # Auto-discovery rather than a checked-in list precisely because a
+    # hand-maintained list is the thing that goes stale the first time
+    # someone adds a font and forgets.
+    def _font_list(self):
+        roots = [
+            ('data/Fonts', 'data/Fonts'),
+            ('lab/test-fonts', 'test-fonts'),
+        ]
+        exts = ('.ttf', '.otf', '.woff', '.ttc')
+        out = []
+        for rel, label in roots:
+            abs_dir = os.path.join(ROOT, rel)
+            if not os.path.isdir(abs_dir):
+                continue
+            for name in sorted(os.listdir(abs_dir)):
+                if not name.lower().endswith(exts):
+                    continue
+                full = os.path.join(abs_dir, name)
+                if not os.path.isfile(full):
+                    continue
+                out.append({
+                    'group': label,
+                    'fileName': name,
+                    'path': rel + '/' + name,
+                    'size': os.path.getsize(full),
+                })
+        return self._json(200, {'ok': True, 'fonts': out})
+
     def do_GET(self):
+        if self._is_font_list():
+            return self._font_list()
         if not self._is_api():
             return super().do_GET()
         cfg = _gh_config()

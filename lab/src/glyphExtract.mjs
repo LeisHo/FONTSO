@@ -63,17 +63,47 @@ export function extractGlyph(font, char, opts = {}) {
 // stitching the results — would have required reworking the renderer,
 // the traversal and the animator to understand a list of results, for
 // no geometric benefit.
-export function extractText(font, text, { flattenSteps = 24, kerning = true, letterSpacing = 0 } = {}) {
+export function extractText(font, text, {
+    flattenSteps = 24, kerning = true, letterSpacing = 0,
+    wrapWidth = 0, lineHeight = 1.2,
+} = {}) {
     if (!text || !text.length) throw new GlyphExtractError('No text supplied.');
+
+    // wrapWidth arrives in EM MULTIPLES (the caller converts from the
+    // raster px the user sees, since only it knows the raster scale);
+    // the pen runs in font units, so convert once here rather than
+    // scattering the conversion through the loop.
+    const wrapUnits = wrapWidth > 0 ? wrapWidth * font.unitsPerEm : 0;
+    const lineAdvance = lineHeight * font.unitsPerEm;
 
     const chars = Array.from(text); // Array.from, so astral characters stay whole
     const commands = [];
     const glyphs = [];
     const skipped = [];
     let penX = 0;
+    let penY = 0;
+    let lineCount = 1;
     let prevGlyph = null;
+    // Index in `commands` where the current word starts, so a wrap can
+    // move the whole word to the next line rather than splitting it.
+    let wordStartCmd = 0;
+    let wordStartPenX = 0;
+    let wordStartGlyphIdx = 0;
 
     for (const ch of chars) {
+        // An explicit newline always breaks, regardless of wrapping.
+        if (ch === '\n') {
+            penX = 0;
+            penY += lineAdvance;
+            lineCount++;
+            prevGlyph = null;
+            wordStartCmd = commands.length;
+            wordStartPenX = 0;
+            wordStartGlyphIdx = glyphs.length;
+            glyphs.push({ char: ch, glyphIndex: -1, glyphName: null, advanceWidth: 0, penX: 0, penY, kerning: 0, hasOutline: false, lineBreak: true });
+            continue;
+        }
+
         const glyph = font.charToGlyph(ch);
         const glyphIndex = font.charToGlyphIndex(ch);
 
@@ -89,7 +119,44 @@ export function extractText(font, text, { flattenSteps = 24, kerning = true, let
         // y=0. getPath's Y is already flipped to screen convention
         // (down-positive) by opentype, which is why `yUp: false` is
         // recorded below rather than silently assumed.
-        const glyphCommands = glyph ? (glyph.getPath(penX, 0, font.unitsPerEm).commands || []) : [];
+        // WRAPPING. Checked BEFORE the glyph is placed, using its own
+        // advance, so a character never straddles the edge.
+        //
+        // Word-first, character-fallback: breaking at the last space
+        // keeps words intact, but a single unbroken run longer than the
+        // line (a long token, or any CJK text, which has no spaces at
+        // all) has no space to break at. Falling back to a character
+        // break there is what stops such a run from growing the raster
+        // without limit — which is the real reason the old length cap
+        // existed and why removing it needs wrapping to be correct.
+        const advance = glyph ? glyph.advanceWidth : 0;
+        if (wrapUnits > 0 && penX > 0 && penX + advance > wrapUnits) {
+            const canWordWrap = wordStartCmd < commands.length && wordStartPenX > 0;
+            if (canWordWrap) {
+                // Move the in-progress word down a line: drop its
+                // commands and re-place them from the new origin.
+                const moved = commands.splice(wordStartCmd);
+                const dx = -wordStartPenX;
+                const dy = lineAdvance;
+                for (const c of moved) commands.push(translateCommand(c, dx, dy));
+                for (let gi = wordStartGlyphIdx; gi < glyphs.length; gi++) {
+                    glyphs[gi].penX -= wordStartPenX;
+                    glyphs[gi].penY = (glyphs[gi].penY || 0) + lineAdvance;
+                    glyphs[gi].wrapped = true;
+                }
+                penX -= wordStartPenX;
+            } else {
+                penX = 0;
+            }
+            penY += lineAdvance;
+            lineCount++;
+            prevGlyph = null;
+            wordStartCmd = commands.length;
+            wordStartPenX = penX;
+            wordStartGlyphIdx = glyphs.length;
+        }
+
+        const glyphCommands = glyph ? (glyph.getPath(penX, penY, font.unitsPerEm).commands || []) : [];
 
         // A blank glyph is NOT an error in a string — a space is a
         // legitimate character that advances the pen and draws nothing.
@@ -105,14 +172,22 @@ export function extractText(font, text, { flattenSteps = 24, kerning = true, let
             char: ch,
             glyphIndex,
             glyphName: (glyph && glyph.name) || null,
-            advanceWidth: glyph ? glyph.advanceWidth : 0,
+            advanceWidth: advance,
             penX,
+            penY,
             kerning: kern,
             hasOutline: glyphCommands.length > 0,
         });
 
-        penX += (glyph ? glyph.advanceWidth : 0) + letterSpacing;
+        penX += advance + letterSpacing;
         prevGlyph = glyph;
+
+        // A space ends the current word, so the next wrap breaks here.
+        if (/\s/.test(ch)) {
+            wordStartCmd = commands.length;
+            wordStartPenX = penX;
+            wordStartGlyphIdx = glyphs.length;
+        }
     }
 
     if (!commands.length) {
@@ -150,6 +225,7 @@ export function extractText(font, text, { flattenSteps = 24, kerning = true, let
         glyphName: first.glyphName,
         advanceWidth: first.advanceWidth,
         totalAdvance: penX,
+        lineCount,
         unitsPerEm: font.unitsPerEm,
         yUp: false,
         commands,
@@ -265,6 +341,16 @@ function kernBetween(font, left, right) {
         value = font.kerningPairs[li + ',' + ri] || 0;
     }
     return value;
+}
+
+// Shifts one path command. Used only by the word-wrap path, which has
+// to re-place a word that was already emitted on the previous line.
+function translateCommand(cmd, dx, dy) {
+    const out = { ...cmd };
+    if (out.x !== undefined) { out.x += dx; out.y += dy; }
+    if (out.x1 !== undefined) { out.x1 += dx; out.y1 += dy; }
+    if (out.x2 !== undefined) { out.x2 += dx; out.y2 += dy; }
+    return out;
 }
 
 function boundsOfContours(contours) {

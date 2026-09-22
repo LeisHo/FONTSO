@@ -88,6 +88,8 @@ project ever grows a real front end. `index.html`, `src/main.js`,
 `lib/ui-engine/` (vendored v0.2.6), `api/save-settings.js`.
 
 - `scripts/active/serve.py` -- the dev server. Required, not optional.
+  Also implements /api/save-settings and /api/fonts (directory listing of
+  data/Fonts + lab/test-fonts, so a dropped-in font needs no manifest).
 - `data/raw/inherited-handyset-2026-09-22/` -- pre-existing HANDYSET files
   moved aside, not deleted. Gitignored. Nothing live reads them.
 
@@ -138,6 +140,11 @@ GOTCHAS
   from the GITHUB_TOKEN environment variable ONLY -- never from a file,
   never logged, never echoed. Without it the endpoint returns 503 and
   the client falls back to localStorage by design.
+- config.rasterEmHeight is BOTH the glyph size and the raster
+  resolution; there is no separate "font size". It is surfaced once, in
+  the Text group, labelled Font Size. Cost tracks raster AREA, so long
+  text at a large size is genuinely slow (43 chars at 256 wrapping to
+  400px is 434x8997 and ~4s); the pipeline warns past 1.5M px.
 - `python -m http.server` CANNOT serve this project -- it sends .mjs as
   text/plain and browsers reject that for ES modules. Use
   scripts/active/serve.py.

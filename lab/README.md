@@ -132,6 +132,19 @@ Two non-obvious details matter a great deal, both found by measurement:
   pixel's neighbours**, not by ring transitions. Ring order says `N` and
   `W` are far apart; in reality they touch.
 
+## Fonts
+
+Drop any `.ttf`/`.otf`/`.woff`/`.ttc` into **`data/Fonts/`** and it
+appears in the picker on reload — `serve.py` lists the folder over
+`/api/fonts`, so there is no manifest to maintain. `lab/test-fonts/` is
+listed the same way, as a second group. A static manifest remains as the
+fallback for a host that isn't `serve.py`.
+
+The binaries are gitignored: licensing (OS faces, an explicitly-DEMO
+face, commercial CJK families) and weight (`data/Fonts` alone is 8.5MB,
+which git would carry forever). One line in `.gitignore` reverses that
+if you want them committed to the private repo.
+
 ## Whole strings, not just single letters
 
 The **Text** group's *Display Text* box takes any string. A single
@@ -147,8 +160,30 @@ letters simply fall out as separate graph components, which is what they
 are. A joining script face whose letters physically touch merges into
 one component, which is the honest answer rather than a special case.
 
-*Use Kerning* and *Letter Spacing (Font Units)* are the two real knobs
-that layout has, so they are controls rather than buried constants.
+*Use Kerning*, *Letter Spacing*, *Font Size*, *Wrap Width* and *Line
+Height* are the knobs layout actually has, so they are controls rather
+than buried constants.
+
+**There is no cap on how much you can type.** Text wraps at *Wrap Width
+(Px)*; word-first, falling back to a character break for a long unbroken
+token or for CJK, which has no spaces to break at. That fallback is what
+removes the cap: without wrapping, a long line grows the raster
+horizontally until it trips the 16M-pixel guard.
+
+**Font Size (Px) is the em height in raster pixels — in this pipeline
+that is simultaneously the glyph size and the raster resolution.** There
+is no separate quantity, which is why there is one slider and not two,
+and why it also governs cost. Measured on 43 characters of Aestera:
+
+| Font Size | Wrap | Result |
+|---|---|---|
+| 256 | 900px | 10 lines, 962x3237, **1.8s** |
+| 256 | 400px | 28 lines, 434x8997, **4.0s** |
+| 96 | 900px | 4 lines, 885x499, **0.48s** |
+
+Thinning is O(pixels) per pass over many passes, so cost tracks raster
+*area*. A run over 1.5M px warns and names the remedy, because the
+obvious reading of a multi-second pause is that something has broken.
 
 **A kerning bug in opentype.js 2.0.0 is worked around here.**
 `font.getKerningValue()` is implemented so that a font with GPOS kerning

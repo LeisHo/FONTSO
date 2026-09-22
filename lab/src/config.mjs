@@ -131,6 +131,20 @@ export const DEFAULT_CONFIG = {
     // string. Off makes letter pairs sit at raw advance width, which is
     // occasionally useful for seeing what the kern table is actually
     // doing, but is not how the font is meant to read.
+    // Wrap to a new line once a line would exceed this width, in RASTER
+    // px. 0 disables wrapping entirely.
+    //
+    // This is what removes the practical cap on how much text can be
+    // typed: without it a long string grows the raster horizontally
+    // without limit until it trips rasterize.mjs's 16M-pixel guard.
+    // Word-first with a character fallback, so CJK (no spaces) and long
+    // unbroken tokens still wrap.
+    wrapWidthPx: 900,
+
+    // Baseline-to-baseline distance for wrapped lines, as a multiple of
+    // the em.
+    lineHeightEm: 1.25,
+
     useKerning: true,
 
     // Extra space inserted after every character's advance, in FONT
@@ -163,7 +177,7 @@ export const DEFAULT_CONFIG = {
 // sane range, and — the part that actually matters — what goes wrong at
 // each extreme. Kept beside the values so the two can't drift.
 export const CONFIG_META = {
-    rasterEmHeight: { label: 'Raster em height', unit: 'px', min: 64, max: 512, step: 32, note: 'Higher = more faithful, much slower.' },
+    rasterEmHeight: { label: 'Font Size', unit: 'px', min: 64, max: 512, step: 16, note: 'The em height in raster px. In this pipeline that IS both the glyph size and the raster resolution - there is no separate quantity. Higher = more faithful and larger, but much slower.' },
     rasterPadding: { label: 'Raster padding', unit: 'px', min: 2, max: 16, step: 1, note: 'Must be >= 2 for the 3x3 thinning kernel.' },
     alphaThreshold: { label: 'Alpha threshold', unit: '0-255', min: 16, max: 240, step: 8, note: 'Lower = fatter mask.' },
     thinningAlgorithm: { label: 'Thinning algorithm', unit: 'enum', options: ['zhang-suen', 'guo-hall'], note: 'Guo-Hall is thinner on diagonals; Zhang-Suen is the predictable reference.' },
@@ -178,6 +192,8 @@ export const CONFIG_META = {
     preserveEndpointsWhileSmoothing: { label: 'Preserve endpoints', unit: 'bool', note: 'Protects terminals from erosion.' },
     mergeAdjacentJunctions: { label: 'Merge adjacent junctions', unit: 'bool', note: 'Off = spurious micro-edges at every crossing.' },
     minSourceAreaPx: { label: 'Min source area', unit: 'px^2', min: 0, max: 200, step: 4, note: 'Measured on the MASK, not the skeleton - that is what separates a dot from a speck.' },
+    wrapWidthPx: { label: 'Wrap Width', unit: 'px', min: 0, max: 4000, step: 50, note: '0 = never wrap; a long line then grows the raster until the 16M-px guard trips.' },
+    lineHeightEm: { label: 'Line Height', unit: 'em', min: 0.6, max: 3, step: 0.05, note: 'Baseline to baseline, as a multiple of the em.' },
     useKerning: { label: 'Use Kerning', unit: 'bool', note: 'Off = raw advance widths, ignoring the kern table.' },
     letterSpacingUnits: { label: 'Letter Spacing', unit: 'font units', min: -400, max: 800, step: 10, note: 'Font units, so it scales with the em. Negative tightens.' },
     nearestRouting: { label: 'Nearest-Curve Routing', unit: 'bool', note: 'Off = fixed reading order, which can hop across the whole glyph.' },

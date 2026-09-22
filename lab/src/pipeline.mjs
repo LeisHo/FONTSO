@@ -53,8 +53,26 @@ export function runPipeline(font, text, configOverrides = {}) {
         const glyph = t('extract', () => extractText(font, text, {
             kerning: config.useKerning,
             letterSpacing: config.letterSpacingUnits,
+            // Wrap width is given in raster px; extractText converts.
+            // px -> em multiples; extractText turns that into font units.
+            wrapWidth: config.wrapWidthPx > 0 ? config.wrapWidthPx / config.rasterEmHeight : 0,
+            lineHeight: config.lineHeightEm,
         }));
         const raster = t('rasterize', () => rasterizeGlyph(glyph, config));
+
+        // Long text at a large font size is genuinely expensive: thinning
+        // is O(pixels) per pass over many passes, so the cost grows with
+        // the AREA of the raster. Measured: 43 characters at font size
+        // 256 wrapping to 900px is a 962x3237 raster and ~1.8s; the same
+        // text wrapping to 400px is 434x8997 and ~4.0s. Naming the
+        // remedy matters more than the number, because the obvious
+        // reading of a 4-second pause is that something is broken.
+        const megaPixels = (raster.width * raster.height) / 1e6;
+        if (megaPixels > 1.5) {
+            warnings.push(
+                `Raster is ${raster.width}x${raster.height} (${megaPixels.toFixed(1)}M px) — thinning cost grows with area. Lower Font Size, or raise Wrap Width so fewer lines are needed.`,
+            );
+        }
 
         if (raster.fillRatio > 0.7) {
             warnings.push(

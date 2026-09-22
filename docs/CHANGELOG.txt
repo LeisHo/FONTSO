@@ -718,6 +718,68 @@ Security note (this session):
   endpoint takes its token from the environment only.
 
 --------------------------------------------------------------------------------
+2026-09-22  -  6:13 AM - 6:16 AM
+
+Integrated the user's data/Fonts/ folder, added a Font Size control, and
+removed the practical cap on how much text can be rendered by adding
+wrapping.
+
+Added -- font folder integration:
+- serve.py now serves /api/fonts, a directory listing of data/Fonts/ and
+  lab/test-fonts/. AUTO-DISCOVERY rather than a checked-in manifest,
+  because a hand-maintained list is exactly the thing that goes stale
+  the first time a font is dropped in and nobody updates it. The static
+  manifest stays as the fallback for a host that is not serve.py.
+- The picker groups by folder and shows file sizes. 22 fonts discovered
+  (14 in data/Fonts, 8 in test-fonts).
+- data/Fonts binaries are gitignored, consistent with lab/test-fonts:
+  licensing (OS faces, one explicitly-DEMO face, commercial CJK
+  families) and weight (8.5MB that git would carry forever). A note in
+  .gitignore says which lines to delete to commit them anyway, since a
+  private repo makes that a personal backup rather than redistribution.
+  data/Fonts/README.txt explains the drop-in behaviour and is tracked.
+
+Added -- Font Size, wrapping, line height:
+- Wrap Width (Px) and Line Height (Em) in the Text group; extractText
+  wraps word-first with a CHARACTER fallback. The fallback is the part
+  that matters: a long unbroken token, or any CJK text (no spaces at
+  all), has nothing to break at, and without it a long line grows the
+  raster horizontally until rasterize.mjs's 16M-pixel guard trips. That
+  guard was the real cap on how much text could be typed.
+- An explicit newline in the text box also breaks a line.
+- Font Size (Px) moved into the Text group from Rasterisation, where it
+  was called "Raster em height". In this pipeline the em height in
+  raster px IS both the glyph size and the raster resolution -- there is
+  no second quantity -- so it is surfaced once, next to the text it
+  sizes, rather than duplicated as a second slider that would fight it.
+- The 2-character cap on the Character field is gone.
+- Pipeline warns when the raster exceeds 1.5M px, naming the remedy
+  (lower Font Size / raise Wrap Width). Thinning is O(pixels) per pass
+  over many passes, so cost tracks AREA, and the obvious reading of a
+  multi-second pause is that something is broken rather than that the
+  work is genuinely large.
+
+Verified (live, real browser):
+- /api/fonts returns 200 with 22 fonts; the picker shows two optgroups
+  (data/Fonts 14, test-fonts 8) with sizes.
+- 6 display/decorative faces all pipeline cleanly at 'A', including both
+  CFF/OTF ones: Adriator 5e/2c, Brown Chunkers 10e/1c, PressStart2P
+  4e/1c, DubbaDubba 6e/1c, alienware_caret 6e/2c, Manbow Solid 3e/1c.
+  All traversals complete.
+- CJK, the real stress case: FZJianZhi-t renders the glyph for U+6C38
+  as 19 edges / 9 junctions / 1 component, traversal complete, 50.5ms;
+  aoyagireisyosimo2 (a 4.4MB brush face) gives 9e/3c in 82.9ms and
+  loaded in 161ms. Two of the four CJK faces simply lack that glyph
+  (one has 257 glyphs total) and report it as such rather than failing.
+- Wrapping arithmetic confirmed by measurement, not reasoning: wrap 900
+  gives a 962px-wide raster (900 + padding) and 10 lines; wrap 400 gives
+  434px and 28 lines; same 43 glyphs and 37 components either way.
+- Font Size is the lever that makes long text practical: the same 43
+  characters at size 96 wrap to 4 lines, 885x499, 480ms -- against 10
+  lines, 962x3237 and 1822.9ms at size 256. 8x faster, and under the
+  warning threshold.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
