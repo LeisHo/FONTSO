@@ -73,6 +73,9 @@ THE LABORATORY (lab/) -- the live project.
   pipeline's parameter set and every change to it re-runs the whole
   glyph->skeleton pass, which would be pure waste for a colour change.
 - `lab/src/viz/animator.mjs` -- constant-speed dot along the route.
+- `lab/src/viz/viewport.mjs` -- zoom/pan gestures (wheel + right-drag on
+  desktop, pinch + two-finger drag on touch). Owns no geometry: it
+  mutates the renderer's existing view transform and asks for a redraw.
 - `lab/src/app.mjs` -- UI wiring. Contains no geometry. Registers every
   laboratory control into the dev panel via window.renderFontLabDevGroups
   (7 groups: Font & Character, Layers, Animation, Rasterisation,
@@ -192,6 +195,15 @@ GOTCHAS
   halfway being that control's 0.5 default, which it was still on. Handle
   BOTH events, gated on whether a pointer is down in the panel (drag =>
   wait for 'change'; typed/synthetic => apply immediately).
+- Whether a tween curve is a LOOP must come from the skeleton edge's
+  own isLoop flag, never from comparing the curve's first and last
+  point. Resampling and smoothing move a ring's seam apart -- measured
+  at 0.2162px on Comic Sans 'O' -- so a coordinate test reports a real
+  ring as open, and loosening the epsilon only trades one wrong answer
+  for another.
+- Zoom must be anchored to the pointer, and the canvas backing store is
+  DPR-scaled while events report CSS pixels; skipping that conversion
+  makes zoom drift away from the cursor on any non-1x display.
 - Dev-panel config controls are wired by ONE DELEGATED listener on
   #devPanel, never per element. A Mobile/Landscape twin is created only
   when its checkbox is ticked, long after wire-up, so per-element

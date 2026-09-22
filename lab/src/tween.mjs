@@ -522,17 +522,20 @@ function unit(a, b) {
 // jump between them is marked 'connector' exactly as the real traversal
 // marks a pen-up, so the animator's own on:draw / on:connector readout
 // stays meaningful and the dot does not appear to teleport unexplained.
-export function tweenAnimationRoute(tween, { nearestRouting = true } = {}) {
+export function tweenAnimationRoute(tween, { nearestRouting = true, entryMode = 'endpoints', loopAnchors = [] } = {}) {
     const items = [];
     for (const c of tween.curves) {
-        if (c.left && c.left.length > 1) items.push({ id: `${c.edgeId}:left`, pts: c.left });
-        if (c.right && c.right.length > 1) items.push({ id: `${c.edgeId}:right`, pts: c.right });
+        // `closed` comes from the skeleton edge, not from comparing the
+        // curve's own endpoints - see isClosedPolyline's note on why a
+        // coordinate test gets this wrong after smoothing.
+        if (c.left && c.left.length > 1) items.push({ id: `${c.edgeId}:left`, pts: c.left, closed: !!c.isLoop });
+        if (c.right && c.right.length > 1) items.push({ id: `${c.edgeId}:right`, pts: c.right, closed: !!c.isLoop });
     }
 
     // Two orderings, so the nearest-neighbour result can be compared
     // against the naive one rather than taken on faith.
     const ordered = nearestRouting
-        ? routeNearest(items, null)
+        ? routeNearest(items, null, { entryMode, loopAnchors })
         : items.map((it) => ({ id: it.id, runs: [it.pts], entryDistance: 0 }));
 
     const flat = [];
@@ -575,5 +578,12 @@ export function tweenAnimationRoute(tween, { nearestRouting = true } = {}) {
         penUpTravel,
         curveCount: items.length,
         runCount: ordered.reduce((n, e) => n + e.runs.length, 0),
+        // Which rule placed each entry, so the debug data shows whether
+        // a loop used a midline endpoint or fell back to the pen.
+        entryRules: ordered.reduce((acc, e) => {
+            const k = e.entryRule || 'unknown';
+            acc[k] = (acc[k] || 0) + 1;
+            return acc;
+        }, {}),
     };
 }

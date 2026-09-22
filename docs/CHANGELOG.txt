@@ -780,6 +780,75 @@ Verified (live, real browser):
   warning threshold.
 
 --------------------------------------------------------------------------------
+2026-09-22  -  6:19 AM - 6:22 AM
+
+Added canvas zoom/pan, and changed tween animation entry points to always
+be curve ends.
+
+Added -- viewport (lab/src/viz/viewport.mjs):
+- Desktop: scroll = zoom, right-drag (or middle-drag) = pan,
+  double-click = reset. Touch: pinch = zoom, two-finger drag = pan.
+  The touch half was implemented in the same pass rather than deferred,
+  per CLAUDE.md S12o, which exists so mobile does not silently fall
+  behind a desktop-phrased request. Single-finger drag is deliberately
+  NOT claimed -- there is no camera to orbit here and taking it would
+  break ordinary scrolling on a phone.
+- Zoom is anchored to the POINTER, not the canvas centre. Centre-zoom is
+  easier to write and much worse to use: the junction being inspected
+  slides away on every zoom step.
+- Event coords are converted through the canvas's DPR ratio, because the
+  backing store is DPR-scaled while events report CSS pixels; without it
+  zoom drifts off the cursor on any non-1x display.
+- New View group: Reset View, Auto-Fit On New Glyph, Zoom Speed.
+  Auto-Fit off keeps the current view across a glyph change, which is
+  what comparing one region across fonts needs. renderer.setResult and
+  resizeToDisplaySize both respect it, so an incidental resize no longer
+  throws away a zoomed view.
+- canvas gets touch-action:none, or a two-finger drag scrolls the page
+  out from under the gesture.
+
+Changed -- tween animation entry points:
+- Entry is now restricted to a curve's two ENDS. Mid-stroke entry is the
+  shortest hop but reads wrong in an animation (the pen starts from
+  nowhere and the curve needs two runs with a retrace), so run count now
+  equals curve count again.
+- A CLOSED tween curve has no ends, so it enters at the point nearest
+  any MIDLINE endpoint -- a free tip of the skeleton -- putting a loop's
+  start where the letter's strokes actually terminate.
+- FALLBACK, documented rather than left undefined: a glyph with no
+  midline endpoints anywhere (an 'O' is a single ring with none) has
+  nothing to be near, so it falls back to the point nearest the pen.
+  Which rule fired is reported per entry in the route data.
+- Tween Entry At Endpoints toggle in the Traversal group.
+
+Fixed (found while verifying the above):
+- Loop detection used a coordinate test (first point within 1e-6 of
+  last), which reported Comic Sans 'O' as OPEN: its tween curves are
+  genuinely rings, but resampling and normal/radius smoothing move the
+  seam apart by 0.2162px. The loop entry rule therefore never fired.
+  Loosening the epsilon would only trade one wrong answer for another,
+  since a real open curve can have ends closer than that. The skeleton
+  edge already carries an authoritative isLoop flag, so that is now
+  threaded through to the router and the coordinate test is a fallback
+  for callers that have nothing better.
+
+Verified (live, real browser, synthetic pointer/wheel/touch events):
+- Zoom-to-cursor is exact: scale 3.6889 -> 6.7186 and the world point
+  under the cursor moved 0.0099px.
+- Right-drag panned exactly the drag delta (60, 40). Left-drag correctly
+  ignored. contextmenu suppressed (defaultPrevented true). Reset and
+  double-click restore the fit.
+- Pinch: a 100px -> 200px finger spread gave a zoom ratio of 2.000
+  against an expected 2.000; the same gesture also panned, as one
+  gesture should. Single-finger touch left the view untouched.
+  Computed touch-action on the canvas is 'none'.
+- Entry rules, Comic Sans: 'g', 'P', 'a', 'd', 'e' all use
+  midline-endpoint for their loops; 'O' uses nearest-to-pen (0 midline
+  endpoints); 'H' uses endpoint throughout and starts 6.1px from a
+  midline endpoint. runs == curves in every case, confirming no
+  interior splits remain.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

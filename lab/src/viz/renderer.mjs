@@ -77,6 +77,8 @@ export class Renderer {
         // than derived here so a slider tick costs one recompute, not one
         // per frame of the animation loop.
         this.tween = null;
+        // Owned by the viewport controller; see setResult().
+        this.autoFit = true;
     }
 
     setTween(tween) {
@@ -91,7 +93,10 @@ export class Renderer {
         this.result = result;
         this.dot = null;
         this.trail = [];
-        this.recomputeView();
+        // Only re-frame when auto-fit is on. With it off the user's own
+        // zoom/pan survives a glyph change, which is the whole point of
+        // the setting: comparing the same region across several fonts.
+        if (this.autoFit !== false) this.recomputeView();
     }
 
     setLayers(layers) {
@@ -134,7 +139,11 @@ export class Renderer {
         if (c.width !== w || c.height !== h) {
             c.width = w;
             c.height = h;
-            this.recomputeView();
+            // Re-fit only when the user has not taken manual control.
+            // Refitting unconditionally would throw away a zoomed view
+            // on every incidental resize, including the one the browser
+            // fires while a panel is being dragged.
+            if (this.autoFit !== false) this.recomputeView();
             return true;
         }
         return false;

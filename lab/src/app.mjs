@@ -24,6 +24,7 @@ import { DEFAULT_CONFIG, CONFIG_META } from './config.mjs';
 import { runPipeline, toDebugJSON } from './pipeline.mjs';
 import { Renderer, DEFAULT_LAYERS, DEFAULT_VIEW, LAYER_COLORS } from './viz/renderer.mjs';
 import { PathAnimator } from './viz/animator.mjs';
+import { ViewportController, DEFAULT_VIEWPORT } from './viz/viewport.mjs';
 import { DEFAULT_TWEEN, buildTween, tweenAnimationRoute } from './tween.mjs';
 import {
     rememberFont, getFont, listFonts, unsavedFonts, markSaved,
@@ -56,6 +57,10 @@ const state = {
 
 const canvas = document.getElementById('view');
 const renderer = new Renderer(canvas);
+// Zoom/pan. Owns no geometry - it mutates the renderer's existing view
+// transform and asks for a redraw. See viewport.mjs for the gesture map
+// and why zoom is anchored to the pointer.
+const viewport = new ViewportController(canvas, renderer, () => renderer.draw());
 const animator = new PathAnimator(onAnimationFrame);
 
 // Elements created inside dev-panel groups; populated by the builders.
@@ -82,6 +87,7 @@ const ui = {
 const GROUPS = {
     FONT: 'Font & Character',
     TEXT: 'Text',
+    VIEW: 'View',
     LAYERS: 'Layers',
     PATH: 'Path',
     TWEEN: 'Path Tween',
@@ -122,7 +128,7 @@ const CONFIG_GROUPS = [
         'mergeAdjacentJunctions', 'simplifyTolerancePx', 'smoothingPasses', 'smoothingStrength',
         'preserveEndpointsWhileSmoothing',
     ]],
-    [GROUPS.TRAVERSAL, ['nearestRouting', 'emitConnectors', 'traversalResampleSpacingPx']],
+    [GROUPS.TRAVERSAL, ['nearestRouting', 'tweenEntryAtEndpoints', 'emitConnectors', 'traversalResampleSpacingPx']],
 ];
 
 const LAB_CONTROLS = [];
@@ -668,8 +674,17 @@ function applyAnimationRoute() {
     const fraction = animator.totalLength > 0 ? animator.progress : 0;
     const useTween = state.animationPath === 'tween'
         && state.tweenResult && state.tweenResult.curves.length;
+    // Midline endpoints (free tips of the skeleton graph) are where a
+    // tween LOOP should start, per the entry rule in routing.mjs.
+    const midlineEndpoints = (r.vector.nodes || [])
+        .filter((n) => n.kind === 'endpoint')
+        .map((n) => ({ x: n.xPx, y: n.yPx }));
     animator.setRoute(useTween
-        ? tweenAnimationRoute(state.tweenResult, { nearestRouting: state.config.nearestRouting })
+        ? tweenAnimationRoute(state.tweenResult, {
+            nearestRouting: state.config.nearestRouting,
+            entryMode: state.config.tweenEntryAtEndpoints === false ? 'nearest' : 'endpoints',
+            loopAnchors: midlineEndpoints,
+        })
         : r.traversal.animation);
     // Preserve position proportionally so switching source mid-run does
     // not snap the dot back to the start.
@@ -743,6 +758,45 @@ function setText(value, origin) {
     rerun();
 }
 
+
+// "View" — zoom/pan behaviour. The gestures themselves need no controls
+// (scroll and right-drag on desktop, pinch and two-finger drag on
+// touch); these are the two things that genuinely have a value worth
+// tuning, plus an explicit way back to the default framing.
+function buildViewGroup() {
+    const content = makeGroup(GROUPS.VIEW);
+
+    customRow(content, (row) => {
+        const reset = document.createElement('button');
+        reset.textContent = 'Reset View';
+        reset.addEventListener('click', () => viewport.resetView());
+        const hint = document.createElement('span');
+        hint.className = 'lab-status';
+        hint.textContent = 'scroll = zoom · right-drag = pan · double-click = reset';
+        row.append(reset, hint);
+    });
+
+    const controls = [
+        addRow(GROUPS.VIEW, {
+            id: 'checkboxAutoFit', type: 'checkbox',
+            label: 'Auto-Fit On New Glyph', value: DEFAULT_VIEWPORT.autoFit,
+        }),
+        addRow(GROUPS.VIEW, {
+            id: 'sliderZoomSpeed', type: 'slider', label: 'Zoom Speed (Per Wheel Unit)',
+            min: 1.0002, max: 1.006, step: 0.0002, value: DEFAULT_VIEWPORT.zoomSpeed,
+        }),
+    ];
+    window.renderControlArray(controls, 'buildViewGroup');
+
+    document.getElementById('checkboxAutoFit').addEventListener('change', (e) => {
+        viewport.setSettings({ autoFit: e.target.checked });
+        renderer.autoFit = e.target.checked;
+    });
+    document.getElementById('sliderZoomSpeed').addEventListener('input', (e) => {
+        viewport.setSettings({ zoomSpeed: parseFloat(e.target.value) });
+    });
+}
+
 // The pipeline report and the debug JSON go into the mandatory built-in
 // "Debug" group (§12i-1) as nested subgroups, rather than inventing a
 // top-level group for them — that group exists precisely for this.
@@ -798,6 +852,7 @@ function buildDebugWidgets() {
 window.renderFontLabDevGroups = function renderFontLabDevGroups() {
     buildFontGroup();
     buildTextGroup();
+    buildViewGroup();
     buildLayersGroup();
     buildPathGroup();
     buildTweenGroup();
@@ -824,6 +879,8 @@ window.renderFontLabDevGroups = function renderFontLabDevGroups() {
         || ctrl.id.startsWith('checkboxLayer')
         || ctrl.id.startsWith('checkboxAnim')
         || ctrl.id.startsWith('sliderAnim')
+        || ctrl.id === 'checkboxAutoFit'
+        || ctrl.id === 'sliderZoomSpeed'
         || `unwired control id: ${ctrl.id}`
     ));
 
@@ -1263,4 +1320,4 @@ renderer.draw();
 // Exposed deliberately: this is a laboratory. Being able to poke the
 // pipeline from the console — re-run with different config, dump a
 // result, diff two fonts — is a feature, not a leak.
-window.fontLab = { state, renderer, animator, rerun, runPipeline, toDebugJSON, loadFontFromUrl };
+window.fontLab = { state, renderer, animator, viewport, rerun, runPipeline, toDebugJSON, loadFontFromUrl };

@@ -132,6 +132,30 @@ Two non-obvious details matter a great deal, both found by measurement:
   pixel's neighbours**, not by ring transitions. Ring order says `N` and
   `W` are far apart; in reality they touch.
 
+## Zoom and pan
+
+| | Desktop | Touch |
+|---|---|---|
+| Zoom | scroll wheel | pinch |
+| Pan | right-drag (or middle-drag) | two-finger drag |
+| Reset | double-click, or *Reset View* | double-tap |
+
+Zoom is anchored to the **pointer**, not the canvas centre — centre-zoom
+makes inspecting a particular junction infuriating, because the thing
+you are looking at slides away every time you zoom in. Verified: the
+world point under the cursor moves by 0.0099px across a zoom from 3.69x
+to 6.72x.
+
+The touch gestures are not an afterthought — the workspace convention
+(`CLAUDE.md` §12o) is that a desktop pan/zoom request implies its touch
+equivalent in the same pass. Single-finger drag is deliberately left
+alone: there is no camera to orbit here, and claiming it would break
+ordinary scrolling.
+
+*Auto-Fit On New Glyph* (View group) keeps your zoom when you change
+glyph, which is what you want while comparing the same region across
+fonts.
+
 ## Fonts
 
 Drop any `.ttf`/`.otf`/`.woff`/`.ttc` into **`data/Fonts/`** and it
@@ -260,12 +284,28 @@ pointless hops a fixed order produces. Measured on Comic Sans `Hello`:
 midline pen-up travel **1022.1px → 658.6px** (-36%); tween route
 **1923.2px → 785.5px** (-59%, from 38.8% of the route down to 20.6%).
 
-A closed curve is simply rotated to start at the nearest point. An
-**open** curve entered in the middle would leave a tail, so it is drawn
-as two runs joined by a backtrack connector (entry → near end, back,
-→ far end): the whole curve is covered and the hop is still the shortest
-available. That is why the tween route's run count rises from 19 to 27
-on `Hello` while the curve count stays at 19.
+**Tween entry points are always ends.** Entering a stroke mid-way is
+the shortest hop but reads wrong in an animation — the pen starts from
+nowhere, and the curve needs two runs with a retrace. So a tween curve
+is entered at whichever of its two ends is nearer.
+
+A **closed** tween curve has no ends, so it enters at the point nearest
+any **midline endpoint** — a free tip of the skeleton — which puts a
+loop's start where the letter's own strokes actually terminate. When a
+glyph has no midline endpoints at all (an `O` is one ring with none), it
+falls back to the point nearest the pen. Which rule fired is reported in
+the debug data rather than left to be inferred: on Comic Sans, `g`, `P`,
+`a`, `d` and `e` all use `midline-endpoint`; `O` uses `nearest-to-pen`;
+`H` uses `endpoint` throughout.
+
+Whether a tween curve is a loop comes from the **skeleton edge's own
+flag**, not from comparing the curve's endpoints. A coordinate test is
+measurably wrong here: resampling and smoothing move a ring's seam
+apart — 0.2162px on Comic Sans `O` — which is far outside any sane
+epsilon while still unmistakably a ring.
+
+*Tween Entry At Endpoints* (Traversal group) can be turned off to allow
+mid-curve entry and the two-run split.
 
 **Animation Path** (in the Animation group) switches the dot between the
 midline and the tween geometry. On Comic Sans `H` that is a 625.6px route

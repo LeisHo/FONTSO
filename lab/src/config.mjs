@@ -163,6 +163,15 @@ export const DEFAULT_CONFIG = {
     // following a fixed reading order. Greedy nearest-neighbour: not a
     // global optimum, but it removes the long pointless hops a fixed
     // order produces. Off restores the deterministic reading order.
+    // Tween animation entry: restrict to a curve's two ENDS rather than
+    // any nearest point. Entering mid-stroke is the shortest hop but
+    // reads wrong in an animation (the pen starts from nowhere and the
+    // curve needs two runs with a retrace). A closed tween curve has no
+    // ends, so it enters at the point nearest a MIDLINE endpoint, or
+    // nearest the pen when the glyph has no midline endpoints at all -
+    // an 'O' is a single ring with none anywhere.
+    tweenEntryAtEndpoints: true,
+
     nearestRouting: true,
 
     emitConnectors: true,
@@ -196,6 +205,7 @@ export const CONFIG_META = {
     lineHeightEm: { label: 'Line Height', unit: 'em', min: 0.6, max: 3, step: 0.05, note: 'Baseline to baseline, as a multiple of the em.' },
     useKerning: { label: 'Use Kerning', unit: 'bool', note: 'Off = raw advance widths, ignoring the kern table.' },
     letterSpacingUnits: { label: 'Letter Spacing', unit: 'font units', min: -400, max: 800, step: 10, note: 'Font units, so it scales with the em. Negative tightens.' },
+    tweenEntryAtEndpoints: { label: 'Tween Entry At Endpoints', unit: 'bool', note: 'Off allows mid-curve entry, which splits a curve into two runs.' },
     nearestRouting: { label: 'Nearest-Curve Routing', unit: 'bool', note: 'Off = fixed reading order, which can hop across the whole glyph.' },
     emitConnectors: { label: 'Emit connectors', unit: 'bool', note: 'Pen-up moves between segments.' },
     traversalResampleSpacingPx: { label: 'Traversal resample spacing', unit: 'px', min: 0, max: 10, step: 0.5, note: '0 = uneven animation speed.' },

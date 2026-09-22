@@ -31,7 +31,13 @@ html, body {
     display: block;
     width: 100vw;
     height: 100vh;
+    /* The canvas handles its own pan/zoom gestures, so the browser must
+       not also scroll or page-zoom on them. Without this, a two-finger
+       drag on touch scrolls the page out from under the gesture. */
+    touch-action: none;
+    cursor: grab;
 }
+#view:active { cursor: grabbing; }
 
 .legend {
     position: fixed;
