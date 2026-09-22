@@ -122,28 +122,40 @@ export function closestEndEntry(pts, from) {
 }
 
 // A closed curve has no ends, so "enter at an endpoint" is undefined for
-// it. The rule used instead: enter at the point on the loop closest to
-// any MIDLINE endpoint — a free tip of the skeleton graph — so a tween
-// loop starts where the letter's own strokes actually terminate.
+// it. The rule used instead: enter at a point on the loop closest to a
+// MIDLINE endpoint — a free tip of the skeleton graph — so a tween loop
+// starts where the letter's own strokes actually terminate.
 //
-// FALLBACK, because the rule genuinely does not always apply: a glyph
-// like 'O' is a single closed ring with no midline endpoints anywhere,
-// so there is nothing to be near. There the loop falls back to the
-// point nearest the pen, which is the same rule every other curve uses
-// and keeps travel minimal. Reported per entry so the debug data shows
-// which rule fired rather than leaving it to be inferred.
-export function loopEntry(pts, from, anchors) {
-    if (anchors && anchors.length) {
+// ONE CANDIDATE PER ANCHOR, not a single global best. This matters: a
+// glyph has several midline endpoints, and pinning the loop to whichever
+// one happens to be closest to the loop can place its entry right across
+// the glyph from where the pen currently is. Offering the loop point
+// nearest EACH anchor and letting the router pick the candidate closest
+// to the pen satisfies both requirements at once — the entry still sits
+// at a midline endpoint, and the hop to reach it is the shortest one
+// available.
+//
+// FALLBACK: a glyph with no midline endpoints anywhere (an 'O' is a
+// single ring with none) has nothing to be near, so every vertex is
+// admissible and the nearest to the pen wins.
+export function loopEntryCandidates(pts, anchors) {
+    if (!anchors || !anchors.length) {
+        return pts.map((p, index) => ({ index, point: p, rule: 'nearest-to-pen' }));
+    }
+    const out = [];
+    const seen = new Set();
+    for (const a of anchors) {
         let best = null;
         for (let i = 0; i < pts.length; i++) {
-            for (const a of anchors) {
-                const d = dist(pts[i], a);
-                if (!best || d < best.distance) best = { index: i, distance: d, point: pts[i], rule: 'midline-endpoint' };
-            }
+            const d = dist(pts[i], a);
+            if (!best || d < best.d) best = { d, index: i };
         }
-        if (best) return best;
+        if (best && !seen.has(best.index)) {
+            seen.add(best.index);
+            out.push({ index: best.index, point: pts[best.index], rule: 'midline-endpoint' });
+        }
     }
-    return { ...closestPointOnPolyline(pts, from || pts[0]), rule: 'nearest-to-pen' };
+    return out;
 }
 
 // Greedy nearest-neighbour ordering over a set of {id, pts} curves.
@@ -164,18 +176,44 @@ export function routeNearest(curves, from = null, { entryMode = 'nearest', loopA
         let pick = 0;
         let pickHit = null;
 
-        const entryFor = (item, penPos) => {
+        // TWO SEPARATE QUESTIONS, and conflating them was a real bug.
+        //
+        // "Where do I enter this curve?" is answered by a per-kind rule:
+        // an open curve at its nearer END, a closed one at the point
+        // nearest a MIDLINE endpoint. Those rules measure different
+        // things - the loop rule's distance is to an anchor, not to the
+        // pen.
+        //
+        // "Which curve do I go to next?" must therefore NOT reuse that
+        // number. It is always the pen-to-entry-point travel distance.
+        // Comparing an anchor distance against a pen distance let a loop
+        // that happened to sit a couple of pixels from some midline
+        // endpoint win the "nearest" contest from clear across the
+        // glyph, which is exactly the long jumps this produced.
+        // Each curve offers a SET of admissible entry points; the router
+        // then picks the (curve, entry) pair with the shortest hop from
+        // the pen. Selection is therefore always genuinely nearest,
+        // while the per-kind rules still control WHICH points are
+        // admissible in the first place.
+        const candidatesFor = (item) => {
             const pts = item.pts;
-            if (isClosed(item, pts)) return loopEntry(pts, penPos, loopAnchors);
-            if (entryMode === 'endpoints') return { ...closestEndEntry(pts, penPos), rule: 'endpoint' };
-            return { ...closestPointOnPolyline(pts, penPos), rule: 'nearest-point' };
+            if (isClosed(item, pts)) return loopEntryCandidates(pts, loopAnchors);
+            if (entryMode === 'endpoints') {
+                return [
+                    { index: 0, point: pts[0], rule: 'endpoint' },
+                    { index: pts.length - 1, point: pts[pts.length - 1], rule: 'endpoint' },
+                ];
+            }
+            return pts.map((p, index) => ({ index, point: p, rule: 'nearest-point' }));
         };
 
         if (pen) {
             let bestD = Infinity;
             for (let i = 0; i < remaining.length; i++) {
-                const hit = entryFor(remaining[i], pen);
-                if (hit.distance < bestD) { bestD = hit.distance; pick = i; pickHit = hit; }
+                for (const cand of candidatesFor(remaining[i])) {
+                    const travel = dist(pen, cand.point);
+                    if (travel < bestD) { bestD = travel; pick = i; pickHit = { ...cand, travel }; }
+                }
             }
         } else {
             // Deterministic cold start: topmost-leftmost first point, so
@@ -188,14 +226,17 @@ export function routeNearest(curves, from = null, { entryMode = 'nearest', loopA
             }
             // Cold start still honours the loop rule, so a glyph whose
             // first curve is a ring does not begin at an arbitrary vertex.
-            pickHit = isClosed(remaining[pick], remaining[pick].pts)
-                ? loopEntry(remaining[pick].pts, null, loopAnchors)
-                : { index: 0, distance: 0, point: remaining[pick].pts[0], rule: 'cold-start' };
+            // Cold start still honours the loop rule, so a glyph whose
+            // first curve is a ring does not begin at an arbitrary vertex.
+            const cands = candidatesFor(remaining[pick]);
+            pickHit = isClosed(remaining[pick], remaining[pick].pts) && cands.length
+                ? { ...cands[0], travel: 0 }
+                : { index: 0, travel: 0, point: remaining[pick].pts[0], rule: 'cold-start' };
         }
 
         const chosen = remaining.splice(pick, 1)[0];
         const runs = runsFromEntry(chosen.pts, pickHit.index, isClosed(chosen, chosen.pts));
-        out.push({ id: chosen.id, runs, entryDistance: pickHit.distance, entryRule: pickHit.rule });
+        out.push({ id: chosen.id, runs, entryDistance: pickHit.travel, entryRule: pickHit.rule });
         const lastRun = runs[runs.length - 1];
         pen = lastRun[lastRun.length - 1];
     }

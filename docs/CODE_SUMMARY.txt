@@ -195,6 +195,14 @@ GOTCHAS
   halfway being that control's 0.5 default, which it was still on. Handle
   BOTH events, gated on whether a pointer is down in the panel (drag =>
   wait for 'change'; typed/synthetic => apply immediately).
+- routing.mjs keeps "which curve next" and "where do I enter it"
+  SEPARATE. Each curve proposes admissible entry points; selection is
+  always pen-to-entry travel. Letting an entry rule's own distance
+  double as the selection metric was a real bug: the loop rule measures
+  to a midline ANCHOR, so a loop sitting near some anchor won the
+  "nearest" contest from across the glyph.
+- A loop offers one candidate per midline endpoint, not a single global
+  best, or its entry can be pinned far from the pen.
 - Whether a tween curve is a LOOP must come from the skeleton edge's
   own isLoop flag, never from comparing the curve's first and last
   point. Resampling and smoothing move a ring's seam apart -- measured

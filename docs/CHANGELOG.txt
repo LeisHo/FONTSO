@@ -849,6 +849,57 @@ Verified (live, real browser, synthetic pointer/wheel/touch events):
   interior splits remain.
 
 --------------------------------------------------------------------------------
+2026-09-22  -  6:33 AM - 6:35 AM
+
+Fixed: tween animation sometimes jumped to a far-away curve. Reported by
+the user; the cause was a bug introduced in the previous entry.
+
+Root cause -- two different quantities compared as if they were one:
+  routeNearest picked the next curve by whatever `distance` each entry
+  rule returned. For an OPEN curve that is the distance to the pen, which
+  is right. For a CLOSED curve, loopEntry returns the distance to the
+  nearest MIDLINE ENDPOINT, which is a completely unrelated measurement.
+  A loop that happened to sit a couple of pixels from some midline
+  endpoint therefore won the "nearest curve" comparison no matter where
+  the pen actually was -- precisely the long jumps reported.
+
+Fix, in two parts (the first alone was not enough, which the measurement
+caught rather than the reasoning):
+1. Selection distance is now always pen-to-entry-point travel, whatever
+   rule placed that entry. This cut the worst excess on 'geode' from
+   52.8px to 0.9px but left 4 non-nearest hops, because a loop's entry
+   was still PINNED to one globally-closest midline endpoint, which can
+   be far from the pen.
+2. A loop now offers ONE CANDIDATE PER midline endpoint rather than a
+   single global best, and the router picks whichever candidate is
+   closest to the pen. Selection and entry placement became a single
+   choice over (curve, admissible entry) pairs. This satisfies both
+   standing requirements at once: a loop still starts at a midline
+   endpoint, and the hop to reach it is the shortest available.
+
+Verified with an audit harness that replays the emitted route and, at
+every pen-up, checks whether any not-yet-drawn curve offered a nearer
+entry:
+- Before: 'geode' 4 non-nearest hops, worst excess 52.8px, 1062px pen-up,
+  max jump 370.1px.
+- After:  'geode', 'Hello', 'Bag', 'O' and 'Wavy' all report ZERO
+  non-nearest hops with worst excess exactly 0. 'geode' pen-up 1062 ->
+  746px, max jump 370.1 -> 224.6px.
+- The remaining large hops are genuinely unavoidable inter-letter travel
+  (~200px between letters at font size 256), confirmed by the audit
+  finding no nearer alternative at those moments.
+
+Two wrong turns worth recording, both caught by measuring:
+- After fix 1 the residual was ~0.9px and was ASSUMED to be the route
+  resampler moving endpoints. Disabling the resampler changed nothing
+  (still 4 hops, 0.93px), so the assumption was wrong.
+- The real explanation was in the AUDIT, not the router: pushRun emits a
+  run's entry point as a 'connector' vertex and then skips the duplicate
+  in the draw pass, so reconstructing runs from draw vertices alone puts
+  the apparent start one vertex late. Measuring from the connector
+  vertex -- the true entry -- gives exactly 0 excess.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

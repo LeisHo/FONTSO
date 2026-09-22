@@ -289,11 +289,19 @@ the shortest hop but reads wrong in an animation — the pen starts from
 nowhere, and the curve needs two runs with a retrace. So a tween curve
 is entered at whichever of its two ends is nearer.
 
-A **closed** tween curve has no ends, so it enters at the point nearest
-any **midline endpoint** — a free tip of the skeleton — which puts a
-loop's start where the letter's own strokes actually terminate. When a
-glyph has no midline endpoints at all (an `O` is one ring with none), it
-falls back to the point nearest the pen. Which rule fired is reported in
+A **closed** tween curve has no ends, so it offers **one candidate entry
+per midline endpoint** — a free tip of the skeleton — and the router
+picks whichever candidate is closest to the pen. That satisfies both
+requirements at once: the entry still sits at a midline endpoint, and
+the hop to reach it is the shortest available. When a glyph has no
+midline endpoints at all (an `O` is one ring with none), every vertex is
+admissible and the nearest to the pen wins.
+
+**Selection and entry are separate decisions.** Each curve proposes a
+set of admissible entry points (its two ends, or its loop candidates);
+the router then chooses the (curve, entry) pair with the shortest hop
+from the pen. Measured: across `geode`, `Hello`, `Bag`, `O` and `Wavy`,
+**zero** transitions go anywhere other than the nearest available entry. Which rule fired is reported in
 the debug data rather than left to be inferred: on Comic Sans, `g`, `P`,
 `a`, `d` and `e` all use `midline-endpoint`; `O` uses `nearest-to-pen`;
 `H` uses `endpoint` throughout.
