@@ -1,0 +1,1004 @@
+/* ====================================================================
+   FONTSO — src/style.css
+   ====================================================================
+   PART 1 (below, down to the "FONTSO PROJECT STYLES" banner) is the
+   <style> block of J:\CLAUDE\PROJECTS\.claude\TEMPLATE_DEV_PANEL.html,
+   copied VERBATIM — not re-derived, not hand-adapted (global CLAUDE.md
+   §12: "start from the template, don't re-derive it from this prose").
+   Do not edit Part 1 to fix a dev-panel styling bug: fix it here only
+   if it is genuinely FONTSO-specific, otherwise fix it in the template
+   first and re-copy, per that template's own MAINTENANCE note.
+
+   PART 2 is this project's own page/app styling plus the host-side
+   chrome for the UI Layout Engine's Inspector (the engine owns layout,
+   the host owns every colour/font/border — docs/ENGINE_API.md).
+   ==================================================================== */
+
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: sans-serif; background: #111; color: #eee; }
+
+    /* ================================================================
+       DEV PANEL — chrome only, no project-specific rules below this
+       point until the bottom "caps toggle" block, which is itself
+       generic (applies to whatever the panel's own text happens to be).
+       ================================================================ */
+
+    /* ============================================================
+       [CSS-1] PANEL BOX — POSITION & SIZE
+       ============================================================ */
+    /* Position/size are held in 2 CSS custom properties (see JS,
+       DEV_PANEL_LAYOUT) rather than plain inline styles, so a project
+       can persist them (they're already included in the default
+       localStorage save/load) without the panel's own code needing to
+       know anything about how a project stores state. */
+    .dev-panel {
+        position: fixed;
+        left: calc(var(--dev-panel-left-px, 20) * 1px);
+        top: calc(var(--dev-panel-top-px, 20) * 1px);
+        background: var(--dev-panel-bg-color, #000);
+        opacity: var(--dev-panel-opacity, 1);
+        color: #fff;
+        padding: 15px;
+        width: calc(var(--dev-panel-width-px, 340) * 1px);
+        height: calc(var(--dev-panel-height-px, 520) * 1px);
+        min-width: 160px;
+        min-height: 120px;
+        max-width: 92vw;
+        max-height: 92vh;
+        font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+        z-index: 99999;
+        font-family: var(--dev-panel-font-family, monospace);
+        border-left: 2px solid var(--dev-accent-color, #0ff);
+        /* Hidden by default (not `flex`) so a non-dev visitor never
+           sees this panel at all, even for a flash - see the tiny
+           early <head> script's own comment. html.dev-mode below
+           restores it; .dev-panel.hidden's own !important (search
+           there) still wins over both when the D-key/hide-button
+           toggle is used, regardless of dev-mode. */
+        display: none;
+        flex-direction: column;
+        /* Native CSS `resize` is NOT reliably touch-draggable on mobile
+           browsers, so this uses 8 custom pointer-events-driven handles
+           (4 edges + 4 corners) instead — see setupPanelResizeHandle().
+           overflow stays visible here (not on this element) so the
+           handles' own negative-offset straddle-the-border portion
+           isn't clipped away — see .dev-panel-scroll-content below for
+           where the actual scrolling happens. */
+        resize: none;
+    }
+    @media (max-width: 767px) {
+        .dev-panel { max-width: 85vw; max-height: 80vh; }
+    }
+    .dev-panel-scroll-content {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        scrollbar-color: var(--dev-accent-color, #0ff) #000;
+        scrollbar-width: thin;
+    }
+    .dev-panel-scroll-content::-webkit-scrollbar { width: 10px; }
+    .dev-panel-scroll-content::-webkit-scrollbar-track { background: #000; }
+    .dev-panel-scroll-content::-webkit-scrollbar-thumb { background: var(--dev-accent-color, #0ff); border-radius: 5px; }
+
+    /* ============================================================
+       [CSS-2] COLLAPSED STATE
+       ============================================================ */
+    /* Collapsed = header-only (distinct from fully hidden, .dev-panel.hidden,
+       toggled by the Hide button / D key). .dev-header lives INSIDE
+       .dev-panel-scroll-content (needed for its own position:sticky),
+       so this targets the scroll-content's children EXCEPT the header,
+       not the wrapper itself — hiding the wrapper would hide the header
+       (and its own re-expand button) too. */
+    .dev-panel.panel-collapsed {
+        height: auto !important;
+        min-height: 0;
+    }
+    .dev-panel.panel-collapsed .dev-header {
+        padding-bottom: 0;
+        margin-bottom: 0;
+        align-items: center;
+        position: static;
+    }
+    .dev-panel.panel-collapsed .dev-panel-scroll-content {
+        flex: 0 1 auto;
+        overflow: visible;
+    }
+    .dev-panel.panel-collapsed .dev-panel-scroll-content > *:not(.dev-header),
+    .dev-panel.panel-collapsed .dev-panel-resize-edge,
+    .dev-panel.panel-collapsed .dev-panel-resize-corner {
+        display: none !important;
+    }
+
+    /* ============================================================
+       [CSS-3] RESIZE HANDLES — EDGES & CORNERS
+       ============================================================ */
+    /* 4 edge strips + 4 corner squares, straddling the panel's own
+       border (-6px to +6px) rather than sitting flush inside it — a
+       flush-inside handle falls short of the panel's true visual edge
+       whenever a native scrollbar is rendering there (scrollbars
+       intercept clicks before they ever reach the DOM). Corners sit
+       above the edges (z-index) so a corner drag always wins over an
+       adjacent edge's hit zone. Sized for real touch targets (20px,
+       well under nothing — under the ~44px platforms recommend, but
+       matching what real-device testing on this pattern converged on;
+       widen further per-project if needed). */
+    .dev-panel-resize-edge {
+        position: absolute;
+        z-index: 2;
+        touch-action: none;
+        -webkit-touch-callout: none;
+    }
+    .dev-panel-resize-edge.edge-top, .dev-panel-resize-edge.edge-bottom {
+        left: 16px; right: 16px; height: 20px; cursor: ns-resize;
+    }
+    .dev-panel-resize-edge.edge-top { top: -6px; }
+    .dev-panel-resize-edge.edge-bottom { bottom: -6px; }
+    .dev-panel-resize-edge.edge-left, .dev-panel-resize-edge.edge-right {
+        top: 16px; bottom: 16px; width: 20px; cursor: ew-resize;
+    }
+    .dev-panel-resize-edge.edge-left { left: -6px; }
+    .dev-panel-resize-edge.edge-right { right: -6px; }
+
+    .dev-panel-resize-corner {
+        position: absolute;
+        z-index: 3;
+        width: 20px;
+        height: 20px;
+        touch-action: none;
+        -webkit-touch-callout: none;
+    }
+    .dev-panel-resize-corner.corner-tl { top: -6px; left: -6px; cursor: nwse-resize; }
+    .dev-panel-resize-corner.corner-tr { top: -6px; right: -6px; cursor: nesw-resize; }
+    .dev-panel-resize-corner.corner-bl { bottom: -6px; left: -6px; cursor: nesw-resize; }
+    .dev-panel-resize-corner.corner-br { bottom: -6px; right: -6px; cursor: nwse-resize; }
+
+    /* Small visible grip icon per corner, inset 8px from the handle's
+       own -6px-offset box so it sits inside the panel's real edge.
+       Stripe direction matches each corner's own resize diagonal. */
+    .dev-panel-resize-corner::after {
+        content: ''; position: absolute; width: 7px; height: 7px; opacity: 0.7;
+    }
+    .dev-panel-resize-corner.corner-tl::after { top: 8px; left: 8px; }
+    .dev-panel-resize-corner.corner-tr::after { top: 8px; right: 8px; }
+    .dev-panel-resize-corner.corner-bl::after { bottom: 8px; left: 8px; }
+    .dev-panel-resize-corner.corner-br::after { bottom: 8px; right: 8px; }
+    .dev-panel-resize-corner.corner-tl::after, .dev-panel-resize-corner.corner-br::after {
+        background-image: repeating-linear-gradient(135deg, var(--dev-accent-color, #0ff) 0 2px, transparent 2px 6px);
+    }
+    .dev-panel-resize-corner.corner-tr::after, .dev-panel-resize-corner.corner-bl::after {
+        background-image: repeating-linear-gradient(45deg, var(--dev-accent-color, #0ff) 0 2px, transparent 2px 6px);
+    }
+    .dev-panel-resize-edge::after {
+        content: ''; position: absolute; background: var(--dev-accent-color, #0ff); opacity: 0.7; border-radius: 1px;
+    }
+    .dev-panel-resize-edge.edge-top::after, .dev-panel-resize-edge.edge-bottom::after {
+        left: 50%; top: 50%; width: 14px; height: 3px; transform: translate(-50%, -50%);
+    }
+    .dev-panel-resize-edge.edge-left::after, .dev-panel-resize-edge.edge-right::after {
+        left: 50%; top: 50%; width: 3px; height: 14px; transform: translate(-50%, -50%);
+    }
+
+    /* ============================================================
+       [CSS-4] HIDDEN STATE & TAB VISIBILITY
+       ============================================================ */
+    .dev-panel.hidden { display: none !important; }
+    /* Restores visibility for a dev-allowed visitor only - see the
+       tiny early <head> script that sets this class, and .dev-panel's
+       own base-rule comment above. */
+    html.dev-mode .dev-panel { display: flex; }
+
+    /* Tab-content visibility, one rule per registered tab. If you add/
+       rename tabs (see DEV_PANEL_TABS in the JS), add a matching rule
+       here — this couldn't be written as one generic attribute selector
+       cleanly without extra plumbing, so it's left as literal per-tab
+       rules matching DEV_PANEL_TABS' own default 3 names. */
+    #desktopTabContent.hidden, #mobileTabContent.hidden, #landscapeTabContent.hidden {
+        display: none !important;
+    }
+
+    /* ============================================================
+       [CSS-5] HEADER — TITLE, DRAG BAR, COLLAPSE/HIDE BUTTONS
+       ============================================================ */
+    /* Header: drag handle for moving the panel. The whole bar is the
+       hit-target (not just the title text) — see the pointerdown
+       listener's own button-guard in JS for why buttons still work
+       normally. touch-action:none + the -webkit- prefixed selection/
+       callout suppression are all needed for a reliable touch-drag on
+       iOS Safari specifically (confirmed via real device testing). */
+    .dev-header {
+        cursor: grab;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        touch-action: none;
+        margin-bottom: 10px;
+        color: #0ff;
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+        /* No explicit z-index here before - `position: sticky` alone
+           keeps an element visually PINNED during scroll, but doesn't
+           guarantee it PAINTS above its siblings: with both at the
+           default z-index:auto, normal DOM-order stacking applies, and
+           later siblings (every row/group below the header, scrolled up
+           to visually overlap it) paint on top. Ported from Clicko
+           (2026-09-19, "The top label and all its buttons should always
+           display above everything else within. right now when i scroll
+           down, the contents block the label buttn"). Comfortably above
+           anything else inside .dev-panel-scroll-content (the highest
+           sibling z-index there, .dev-group-drag-handle, is 1). */
+        z-index: 50;
+        background: rgba(0,0,0,0.95);
+        padding-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    .dev-header.dragging { cursor: grabbing; }
+    .dev-panel-title {
+        font-size: calc(var(--dev-panel-title-font-size-px, 16) * 1px);
+        color: var(--dev-panel-title-text-color, #fff);
+        letter-spacing: calc(var(--dev-panel-title-letter-spacing-px, 0) * 1px);
+        line-height: var(--dev-panel-title-line-height, 1.2);
+    }
+    /* Bold/Capitalize toggle classes for the panel's own big "DEV" title -
+       ported from Clicko's own Dev Panel group (2026-09-14, making its
+       current settings the template's new standard). Class-toggle, same
+       mechanism as the existing 4 caps-text toggles below - font-weight/
+       text-transform have no "conditional on a custom property" form. */
+    .dev-panel.dev-bold-title .dev-panel-title { font-weight: bold; }
+    .dev-panel.dev-caps-title-text .dev-panel-title { text-transform: uppercase; }
+    .dev-header-buttons { display: flex; gap: 4px; }
+    .dev-hide-btn, .dev-collapse-btn, .dev-header-icon-btn {
+        background: var(--dev-accent-color, #0ff);
+        /* Was a fixed #000 - decoupled to the same Button Text Color
+           control every other dev-panel button below now uses
+           (2026-09-14, matching Clicko's current Dev Panel group). */
+        color: var(--dev-panel-button-text-color, #000);
+        border: none;
+        border-radius: 3px;
+        width: 22px;
+        min-height: calc(var(--dev-button-height-px, 22) * 1px);
+        padding-top: calc(var(--dev-button-text-border-px, 0) * 1px);
+        padding-bottom: calc(var(--dev-button-text-border-px, 0) * 1px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        line-height: var(--dev-button-text-line-height, 1.2);
+        letter-spacing: calc(var(--dev-button-text-letter-spacing-px, 0) * 1px);
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .dev-hide-btn:hover, .dev-collapse-btn:hover, .dev-header-icon-btn:hover { filter: brightness(1.3); }
+    /* Text Edit Mode's own ON state (no native checkbox anymore - see
+       #devTextEditModeBtn's own JS comment) and Add Group's "armed"
+       (right-clicked, waiting for a selection) state both read the same
+       way - a visibly pressed/inverted look distinct from the plain
+       icon-button default above. */
+    .dev-header-icon-btn.active, .dev-header-icon-btn.armed {
+        outline: 2px solid var(--dev-panel-button-text-color, #000);
+        outline-offset: -2px;
+    }
+
+    /* ============================================================
+       [CSS-6] TABS
+       ============================================================ */
+    .dev-tabs { display: flex; gap: 4px; margin: 8px 0; }
+    .dev-tab-btn {
+        flex: 1;
+        background: #222;
+        /* Was --dev-accent-color, both here and in .active below - now a
+           dedicated Tab Text Color control that follows the SAME value
+           regardless of active/pressed state (2026-09-14, matching
+           Clicko's own current Dev Panel group - direct follow-up there:
+           "make them all follow the text color i set regardless of press
+           state"). */
+        color: var(--dev-tab-text-color, #0ff);
+        border: 1px solid var(--dev-accent-color, #0ff);
+        border-radius: 3px;
+        min-height: calc(var(--dev-button-height-px, 22) * 1px);
+        padding-top: calc(var(--dev-button-text-border-px, 0) * 1px);
+        padding-bottom: calc(var(--dev-button-text-border-px, 0) * 1px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--dev-panel-font-family, monospace);
+        font-size: calc(var(--dev-tab-font-size-px, 12) * 1px);
+        letter-spacing: calc(var(--dev-tab-text-letter-spacing-px, 0) * 1px);
+        line-height: var(--dev-tab-line-height, 1.2);
+        cursor: pointer;
+    }
+    .dev-panel.dev-bold-tab .dev-tab-btn { font-weight: bold; }
+    .dev-tab-btn.active { background: var(--dev-accent-color, #0ff); color: var(--dev-tab-text-color, #000); }
+
+    /* "+ Add Group" - styled like the tab buttons above (same border/
+       font/bold/height), but background is the group-label-bar's own
+       color (--dev-group-label-bg-color, also driving .dev-section-title
+       below) instead of the tabs' plain #222 - per direct request, so
+       the button visually reads as "the thing that adds one of these
+       label bars." Margin top/bottom both 10px so the gap between this
+       button and the tab row above it equals the gap between the tab
+       row and the Copy/Sync/Reset row above THAT (8px .dev-tabs margin +
+       10px here = 18px either side) - per direct request. */
+    .dev-add-group-btn {
+        display: flex;
+        width: 100%;
+        background: var(--dev-group-label-bg-color, #134e4a);
+        /* Text color deliberately decoupled from --dev-accent-color
+           (border still uses accent, unchanged) - Accent Color and
+           Group Label Bg Color are two independently user-editable
+           pickers that can legitimately end up equal, which makes this
+           button's text invisible against its own background while the
+           accent-colored border still makes it look like a working,
+           empty button (real incident: Clicko's own deployed panel hit
+           this exact collision - see its own copy of this comment).
+           Same fix as .dev-section-title's own Group Text Color control
+           - text color for anything painted on --dev-group-label-bg-color
+           must never itself be --dev-accent-color. */
+        color: var(--dev-panel-non-title-text-color, #fff);
+        border: 1px solid var(--dev-accent-color, #0ff);
+        border-radius: 3px;
+        min-height: calc(var(--dev-button-height-px, 22) * 1px);
+        padding-top: calc(var(--dev-button-text-border-px, 0) * 1px);
+        padding-bottom: calc(var(--dev-button-text-border-px, 0) * 1px);
+        align-items: center;
+        justify-content: center;
+        font-family: var(--dev-panel-font-family, monospace);
+        font-size: calc(var(--dev-tab-font-size-px, 12) * 1px);
+        font-weight: bold;
+        letter-spacing: calc(var(--dev-tab-text-letter-spacing-px, 0) * 1px);
+        cursor: pointer;
+        margin: 10px 0;
+    }
+    .dev-add-group-btn:hover { filter: brightness(1.3); }
+
+    /* ============================================================
+       [CSS-7] TOGGLE BUTTON & COPY/SAVE/RESET BUTTONS
+       ============================================================ */
+    .dev-toggle-btn {
+        /* Hidden by default, same reasoning/mechanism as .dev-panel's
+           own comment above - html.dev-mode restores it. */
+        display: none;
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        z-index: 100000;
+        background: var(--dev-accent-color, #0ff);
+        color: var(--dev-panel-button-text-color, #000);
+        border: none;
+        border-radius: 4px;
+        padding: 6px 10px;
+        font-family: monospace;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: pointer;
+        opacity: 0.85;
+    }
+    html.dev-mode .dev-toggle-btn { display: inline-block; }
+    .dev-toggle-btn:hover { opacity: 1; }
+
+    .dev-buttons { display: flex; align-items: center; gap: 5px; margin-bottom: 10px; }
+    .dev-save-sync-status { font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px); white-space: nowrap; flex-shrink: 0; }
+    .dev-buttons button {
+        flex: 1;
+        min-height: calc(var(--dev-button-height-px, 22) * 1px);
+        padding-top: calc(var(--dev-button-text-border-px, 0) * 1px);
+        padding-bottom: calc(var(--dev-button-text-border-px, 0) * 1px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--dev-button-text-font-size-px, 10) * 1px);
+        background: var(--dev-accent-color, #0ff);
+        /* Was a fixed #000 - decoupled to its own independent Button Text
+           Color control (2026-09-14, matching Clicko's current Dev Panel
+           group). */
+        color: var(--dev-panel-button-text-color, #000);
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        letter-spacing: calc(var(--dev-button-text-letter-spacing-px, 0) * 1px);
+        line-height: var(--dev-button-text-line-height, 1.2);
+    }
+    .dev-panel.dev-bold-button .dev-buttons button,
+    .dev-panel.dev-bold-button .dev-hide-btn,
+    .dev-panel.dev-bold-button .dev-collapse-btn {
+        font-weight: bold;
+    }
+    .dev-buttons button:hover { filter: brightness(1.3); }
+
+    /* Dev panel search (2026-09-17) - Ctrl+F-style group/setting finder,
+       ported from DickoClicko's own dpSearchInput/dpSearchCount, adapted
+       to this template's tab-scoped .dev-section/.dev-row DOM shape (see
+       setupDevSearch()'s own comment for the full mechanism/adaptation
+       notes). Sits between Copy/Sync/Reset and "Saved Dev Settings" -
+       panel-level chrome, not tripled per tab. */
+    .dev-search-row { display: flex; align-items: center; gap: 5px; margin-bottom: 10px; }
+    .dev-search-input {
+        flex: 1;
+        min-width: 0;
+        min-height: calc(var(--dev-button-height-px, 22) * 1px);
+        font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+        background: #0f0f18;
+        color: var(--dev-panel-non-title-text-color, #aaa);
+        border: 1px solid var(--dev-accent-color, #0ff);
+        border-radius: 3px;
+        padding: 2px 6px;
+    }
+    .dev-search-count { flex-shrink: 0; font-size: calc(var(--dev-setting-title-font-size-px, 12) * 0.85px); color: var(--dev-panel-non-title-text-color, #aaa); min-width: 40px; text-align: right; }
+    /* Only the CURRENT match is ever highlighted at a time (see
+       setupDevSearch()'s own comment on why) - outline, not border, so it
+       never shifts layout, same reasoning as .dev-selected. */
+    .dev-search-highlight-active {
+        outline: 2px solid #ffb400;
+        outline-offset: 1px;
+        background: color-mix(in srgb, #ffb400 25%, transparent);
+        border-radius: 2px;
+    }
+
+    /* ============================================================
+       [CSS-8] GROUPS & SETTING ROWS
+       ============================================================ */
+    /* position:relative — positioning context for .dev-group-drag-handle
+       below, a SIBLING of .dev-section-title (not a child — the title's
+       own rename mechanism rewrites its entire textContent, which would
+       silently delete a child element the first time a group is ever
+       renamed; same reasoning the group-cascade checkbox's own
+       withPreservedTitleCheckbox() helper exists for — but a checkbox
+       that belongs INSIDE the title's own text flow needs that preserve/
+       restore treatment, while an icon that just needs to sit in a fixed
+       corner is simpler as a plain sibling, no reattachment machinery
+       needed at all). */
+    .dev-section { margin-bottom: 15px; position: relative; }
+    .dev-section-title {
+        /* FIX (found on Handyset, 2026-09-21 -- same "genuine template
+           bug" class as the group-cascade-checkbox display:none fix
+           above): .dev-group-cascade-checkbox is appended as a CHILD of
+           this element (title.appendChild(...) in the JS below) and
+           positioned `position:absolute; top:50%; right:52px` -- but this
+           rule never declared its own `position`, so it defaulted to
+           `static` and the checkbox's absolute positioning escaped past
+           it to the next positioned ancestor, `.dev-section` (spanning
+           the WHOLE group including all its content, not just the title
+           bar). `top:50%` then resolved against that much taller box,
+           visually landing the checkbox somewhere in the middle of the
+           group's own settings rows on any project this template ships
+           to -- a literal "ghost checkbox" floating among unrelated
+           controls, reported live on Handyset both as "ghost checkboxes"
+           and, separately, as "some checkboxes aren't aligned to the
+           right edge of the dev panel" (the same bug, two symptoms).
+           `position:relative` here gives the checkbox the correct, much
+           smaller anchor (this title bar itself), so top:50%/right:52px
+           now center it vertically in the title bar and flush it against
+           the title bar's own right inner edge, in the same reserved
+           right-padding strip as the lock icon (right:8px) and undock
+           button (right:30px) below. Live-verified on Handyset at 2
+           different nesting depths (a top-level group and a nested
+           subgroup) after this fix -- both checkboxes landed on their own
+           title bars, correctly aligned to each other. */
+        position: relative;
+        /* Was a fixed accent-color reference - decoupled to its own
+           independent Group Text Color control (2026-09-14, matching
+           Clicko's own current Dev Panel group, which made this exact
+           change for the same "shouldn't have to be tied to Accent
+           Color" reason). */
+        color: var(--dev-panel-group-text-color, #0ff);
+        font-size: calc(var(--dev-group-title-font-size-px, 13) * 1px);
+        letter-spacing: calc(var(--dev-group-text-letter-spacing-px, 0) * 1px);
+        line-height: var(--dev-group-text-line-height, 1.2);
+        margin-bottom: 8px;
+        cursor: pointer;
+        user-select: none;
+        /* Left padding widened to reserve room for .dev-group-drag-handle
+           (absolutely positioned at left:8px) so it doesn't sit on top of
+           the collapse arrow (▼/▶), always the title's own first
+           character. */
+        padding: 5px 5px 5px 22px;
+        background: var(--dev-group-label-bg-color, #134e4a);
+        border-radius: 3px;
+        /* The title itself is no longer a drag handle — reordering now
+           starts only from the dedicated .dev-group-drag-handle icon
+           (per CLAUDE.md §12n's own "the far-left icon only" convention,
+           ported from Clicko's own identical fix — see that project's
+           CHANGELOG for the direct request this came from). Since
+           nothing here starts a drag anymore, the old touch-action
+           tradeoff this comment used to document doesn't apply to THIS
+           element at all — it moved to the new handle icon itself, which
+           is small enough that marking IT touch-action:none doesn't cost
+           scrolling the rest of the panel the way marking the whole
+           title bar once would have. */
+    }
+    .dev-section-title:hover { filter: brightness(1.3); }
+    /* font-weight was previously a hardcoded, always-on "bold" - now a
+       real toggle (default true, matching Clicko's own groupBold
+       default), same class-toggle mechanism as the 4 existing caps-text
+       toggles below. */
+    .dev-panel.dev-bold-group .dev-section-title { font-weight: bold; }
+    /* Corrected 2026-09-16 (direct report: "the group and settings drag
+       icon has weird placement throughout. for subfolders, its too far
+       left, for top level folders its slightly too far to the right and
+       too high. they should always be centered in the empty space
+       between the title and the edge of the box"). The old version used
+       fixed top:5px/left:8px offsets tuned by eye for ONE nesting depth -
+       wrong at every OTHER depth, since a nested .dev-section-title runs
+       at 0.85x font-size (see ".dev-section-content > .dev-section >
+       .dev-section-title" below) while the icon's own left offset never
+       adjusted for that. Now spans the FULL reserved gutter - top:0,
+       bottom:0 (full title-bar height) and width:22px (exactly
+       .dev-section-title's own padding-left reservation, unchanged by
+       nesting depth) - and centers its glyph inside that box with flex,
+       so it's correctly centered at every depth and every group-title
+       font size, not just the one this was originally eyeballed against. */
+    .dev-group-drag-handle {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 22px;
+        /* Corrected 2026-09-16: `bottom: 0` (spanning .dev-section's own
+           FULL height, positioning-context ancestor) made the handle
+           stretch down the entire group INCLUDING all its content/nested
+           subgroups, not just the title bar - confirmed live via
+           getBoundingClientRect() (a content-heavy group's handle was
+           ~350px tall, vertically centered nowhere near the actual
+           title). This mirrors .dev-section-title's OWN box-height
+           formula exactly instead (10px = its 5px top + 5px bottom
+           padding, plus font-size * line-height for its one line of
+           text) so the handle's box is always exactly as tall as the
+           title bar it sits beside, at any font-size setting - flex
+           centering inside that exact-height box is then genuinely
+           correct, not just close. The 0.85x nested-title font-size
+           override two rules below has its own matching handle-height
+           override right after it, for the same reason. */
+        height: calc(10px + var(--dev-group-title-font-size-px, 13) * 1px * var(--dev-group-text-line-height, 1.2));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--dev-group-title-font-size-px, 13) * 1px);
+        line-height: 1;
+        cursor: grab;
+        user-select: none;
+        z-index: 1;
+        opacity: 0.75;
+        touch-action: none;
+    }
+    .dev-group-drag-handle:hover { opacity: 1; }
+    .dev-group-drag-handle:active { cursor: grabbing; }
+    /* Undock (2026-09-19, direct request: "next to the lock button per
+       settings group, provide a 'undock' button that undocks that one
+       setting group and allows me to use it, visibly as a differetn
+       panel" - clarified "lock button" meant the group-level cascade
+       sync checkbox, which sits inline right after the title TEXT, not
+       at a fixed edge - see .dev-group-cascade-checkbox's own comment).
+       Positioned like .dev-group-drag-handle above (a plain SIBLING of
+       .dev-section-title, never a child - same "never needs preserve/
+       reattach across a textContent rewrite" reasoning), mirrored to the
+       title bar's RIGHT edge instead of its left, which is where the
+       cascade checkbox visually ends up for most title lengths anyway -
+       see toggleGroupUndock()'s own comment for the undock/dock
+       mechanism itself. */
+    /* Lock icon (2026-09-19, ported from Clicko - "add a lock icon that i
+       can select. If selected, the settings within that group cannot be
+       reordered or moved into another group"). Deliberately a SIBLING of
+       .dev-section-title (added by JS, not a child of it) - same rename-
+       survival reasoning as .dev-group-drag-handle/.dev-group-undock-btn
+       above. Rightmost of the 3 title-bar icons, per direct layout
+       request ("in order from right to left... Lock icon... Undock/Dock
+       button... Then the single checkbox"). */
+    .dev-group-lock-icon {
+        position: absolute;
+        top: 5px;
+        right: 8px;
+        font-size: calc(var(--dev-group-title-font-size-px, 13) * 1px);
+        line-height: 1;
+        cursor: pointer;
+        user-select: none;
+        z-index: 1;
+        opacity: 0.75;
+    }
+    .dev-group-lock-icon:hover { opacity: 1; }
+    /* Locked groups get the OPPOSITE hover behavior of an unlocked one -
+       same as Clicko's own identical rule/reasoning. */
+    .dev-group-lock-icon.locked { opacity: 1; }
+    .dev-group-lock-icon.locked:hover { opacity: 0.5; }
+    /* Shifted from right:0 to right:30px (2026-09-19) to make room for the
+       Lock icon above, per the same layout request - middle of the 3. */
+    .dev-group-undock-btn {
+        position: absolute;
+        top: 0;
+        right: 30px;
+        width: 22px;
+        height: calc(10px + var(--dev-group-title-font-size-px, 13) * 1px * var(--dev-group-text-line-height, 1.2));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--dev-group-title-font-size-px, 13) * 1px);
+        line-height: 1;
+        cursor: pointer;
+        user-select: none;
+        z-index: 1;
+        opacity: 0.75;
+    }
+    .dev-group-undock-btn:hover { opacity: 1; }
+    .dev-section-content > .dev-section > .dev-group-undock-btn {
+        height: calc(10px + var(--dev-group-title-font-size-px, 13) * 0.85px * var(--dev-group-text-line-height, 1.2));
+    }
+    /* Widened from 5px to 26px to reserve room for the undock button
+       above, mirroring the LEFT padding's own 22px reservation for the
+       drag handle - widened again (2026-09-19) from 26px to 78px to also
+       fit the Lock icon and the now-absolutely-positioned cascade
+       checkbox, both landing in this same reserved strip. */
+    .dev-section-title {
+        padding-right: 78px;
+    }
+    /* A group's title/content while it's living inside its own floating
+       panel instead of the main dev panel - dims the (now-redundant,
+       since the floating panel has its own) drag handle and hides the
+       undock button's stale state briefly during the move; mostly a
+       marker class for other selectors/JS to key off if needed later. */
+    .dev-section.dev-group-undocked {
+        opacity: 0.97;
+    }
+    /* Floating panel a group's content lives in while undocked. Mirrors
+       .dev-panel's own visual chrome (background/border/font) but with
+       independent position/size, held as plain inline styles (not the
+       --dev-panel-*-px custom properties, which are specific to the ONE
+       main panel) since multiple groups can be undocked into multiple
+       independent floating panels at once. Session-only by design - no
+       persistence across reload (see toggleGroupUndock()'s own comment) -
+       so it deliberately does NOT hook into the localStorage save/load
+       path the main panel's own position/size does. */
+    .dev-undock-panel {
+        position: fixed;
+        background: var(--dev-panel-bg-color, #000);
+        color: #fff;
+        padding: 15px;
+        min-width: 160px;
+        min-height: 120px;
+        max-width: 92vw;
+        max-height: 92vh;
+        font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+        z-index: 99999;
+        font-family: var(--dev-panel-font-family, monospace);
+        border-left: 2px solid var(--dev-accent-color, #0ff);
+        display: flex;
+        flex-direction: column;
+        resize: none;
+    }
+    .dev-undock-panel-header {
+        cursor: grab;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+        margin-bottom: 10px;
+        color: #0ff;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+        gap: 8px;
+    }
+    .dev-undock-panel-header.dragging { cursor: grabbing; }
+    .dev-undock-panel-dock-btn {
+        background: var(--dev-accent-color, #0ff);
+        color: var(--dev-panel-button-text-color, #000);
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        padding: 2px 8px;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+    .dev-undock-panel-body {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        scrollbar-color: var(--dev-accent-color, #0ff) #000;
+        scrollbar-width: thin;
+    }
+    .dev-undock-panel-body::-webkit-scrollbar { width: 10px; }
+    .dev-undock-panel-body::-webkit-scrollbar-track { background: #000; }
+    .dev-undock-panel-body::-webkit-scrollbar-thumb { background: var(--dev-accent-color, #0ff); border-radius: 5px; }
+    .dev-section-content { display: block; margin-left: 5px; }
+    /* Nested-group styling, unlimited depth (see setupDragReorder's own
+       comment near devGroupNestingDepth) — a pure structural selector, no
+       JS class-toggling needed. Matches a .dev-section at ANY depth, so
+       indent/border-left stack additively the deeper a group nests. */
+    .dev-section-content > .dev-section {
+        padding-left: 10px;
+        border-left: 2px solid rgba(0, 255, 255, 0.25);
+    }
+    .dev-section-content > .dev-section > .dev-section-title {
+        font-size: calc(var(--dev-group-title-font-size-px, 13) * 0.85px);
+    }
+    /* Matches the 0.85x nested title font-size override directly above -
+       see .dev-group-drag-handle's own comment for why this has to track
+       the title's real box height exactly, not just its font-size. */
+    .dev-section-content > .dev-section > .dev-group-drag-handle {
+        height: calc(10px + var(--dev-group-title-font-size-px, 13) * 0.85px * var(--dev-group-text-line-height, 1.2));
+    }
+    /* An empty group (freshly added, or everything dragged out of it)
+       needs a visible/hittable drop target even at 0 rows. */
+    .dev-section-content:empty {
+        min-height: 24px;
+        border: 1px dashed var(--dev-accent-color, #0ff);
+        opacity: 0.5;
+    }
+    .dev-section-content.collapsed { display: none; }
+
+    .dev-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    /* Shift+click multi-select, for folding a mix of settings/groups
+       into a new group on "+ Add Group" - see setupDevGroupSelection()
+       and addDevGroup()'s own comments. Outline (not border) so it never
+       shifts layout/box size; a faint accent-tinted background makes a
+       selected group's whole content area read as selected too, not
+       just its title bar. */
+    .dev-row.dev-selected, .dev-section.dev-selected {
+        outline: 2px solid var(--dev-accent-color, #0ff);
+        outline-offset: 2px;
+        background: color-mix(in srgb, var(--dev-accent-color, #0ff) 12%, transparent);
+        border-radius: 3px;
+    }
+    /* Dynamic Mobile/Landscape visibility/independence checkboxes -
+       [JS-4b0]. Pushed to the row's own far right (margin-left:auto)
+       so they read as a distinct "meta" control, separate from the
+       row's own value controls; the group-level cascade version sits
+       inline right after a section title's own text instead (no
+       margin-left:auto there - see its own selector below). */
+    .dev-visibility-checkbox, .dev-independence-checkbox {
+        margin-left: auto;
+        accent-color: var(--dev-accent-color, #0ff);
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    /* Absolutely positioned (2026-09-19, was inline margin-left/vertical-
+       align) - leftmost of the 3 title-bar icons, per direct layout
+       request ("in order from right to left... Lock icon... Undock/Dock
+       button... Then the single checkbox"). Still a CHILD of
+       .dev-section-title (unchanged - still needs withPreservedTitleCheckbox()'s
+       own preserve/reattach across a textContent rewrite), but position:
+       absolute takes it out of that element's normal inline flow and
+       positions it against the nearest POSITIONED ancestor instead
+       (.dev-section-title itself has no position set, so that's
+       .dev-section, same as the Lock/Undock icons above) - same visual
+       right-aligned stacking as those 2 siblings, with zero DOM/JS
+       attachment changes needed. */
+    .dev-group-cascade-checkbox {
+        position: absolute;
+        top: 50%;
+        right: 52px;
+        transform: translateY(-50%);
+        accent-color: var(--dev-accent-color, #0ff);
+        cursor: pointer;
+        z-index: 1;
+    }
+    .dev-row-hidden-by-checkbox {
+        display: none !important;
+    }
+    .dev-section-hidden-empty {
+        display: none !important;
+    }
+    .dev-label {
+        min-width: 140px;
+        color: var(--dev-panel-non-title-text-color, #aaa);
+        font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+        letter-spacing: calc(var(--dev-settings-text-letter-spacing-px, 0) * 1px);
+        line-height: var(--dev-settings-line-height, 1.2);
+    }
+    .dev-panel.dev-bold-settings .dev-label { font-weight: bold; }
+    /* Row-level counterpart of .dev-group-drag-handle above — same
+       far-left-icon-only convention, ported from Clicko. A plain FIRST
+       CHILD of .dev-row (not of .dev-label — only .dev-label's own
+       textContent gets rewritten on rename, never the row's), so no
+       absolute-positioning workaround is needed: .dev-row's own flex +
+       8px gap already puts it at the far left for free. .dev-label is no
+       longer a drag handle itself (that grab cursor moved to the new
+       icon), so it goes back to a plain, non-interactive label. */
+    .dev-row-drag-handle {
+        cursor: grab;
+        user-select: none;
+        opacity: 0.6;
+        flex-shrink: 0;
+        touch-action: none;
+    }
+    .dev-row-drag-handle:hover { opacity: 1; }
+    .dev-row-drag-handle:active { cursor: grabbing; }
+    .dev-reorder-dragging { opacity: 0.5; }
+    /* Mouse Log ([JS-13c]) live display - a plain scrollable list, one
+       child <div> per entry (Copy/Save read the backing mouseLog array,
+       not this DOM, so there's no DOM-vs-array divergence risk - see
+       mouseLogEntryToLine()). */
+    .dev-mouse-log {
+        height: 140px;
+        overflow-y: auto;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--dev-accent-color, #0ff);
+        border-radius: 4px;
+        padding: 4px 6px;
+        font: 10px/1.5 ui-monospace, Consolas, monospace;
+        color: var(--dev-panel-non-title-text-color, #aaa);
+        white-space: pre-wrap;
+        word-break: break-all;
+        margin-top: 4px;
+    }
+    .dev-mouse-log-empty { opacity: 0.6; }
+
+    /* ============================================================
+       [CSS-9] CONTROLS — SLIDERS, COLORS, SELECTS, TEXT INPUTS
+       ============================================================ */
+    .dev-slider {
+        flex: 1;
+        min-width: 130px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--dev-slider-color, #3b82f6);
+    }
+    /* color was tied to Accent Color - decoupled to its own independent
+       Setting Number Text Color control (2026-09-14, matching Clicko's
+       own current Dev Panel group). */
+    .dev-value { min-width: 45px; color: var(--dev-value-text-color, #0ff); text-align: right; font-size: calc(var(--dev-value-font-size-px, 10) * 1px); }
+    /* Click-to-type exact value overlay, per CLAUDE.md Section 12h —
+       applied at init (see makeDevValuesEditable()) to any .dev-value
+       span with a matching .dev-slider (a decorative note span next to
+       a color picker shares .dev-value but has no matching slider, so
+       it's left alone). */
+    .dev-value-editable { cursor: text; }
+    .dev-value-editable:hover { outline: 1px solid var(--dev-accent-color, #0ff); }
+    .dev-value-edit-input {
+        width: 52px; background: #000; color: var(--dev-value-text-color, #0ff);
+        border: 1px solid var(--dev-accent-color, #0ff);
+        font-family: var(--dev-panel-font-family, monospace);
+        font-size: calc(var(--dev-value-font-size-px, 10) * 1px); text-align: right; padding: 0;
+    }
+    .dev-text-input {
+        width: 52px; background: #000; color: var(--dev-accent-color, #0ff);
+        border: 1px solid var(--dev-accent-color, #0ff);
+        font-family: var(--dev-panel-font-family, monospace);
+        font-size: 11px; text-align: right; padding: 2px 4px;
+    }
+    /* Width variant for a free-text field that needs real room (e.g. a
+       spec string like "0=>1, 3, -4=>-7") — the short numeric
+       .dev-text-input above is the default. */
+    .dev-text-input-wide { width: 160px; text-align: left; }
+    .dev-color-picker {
+        width: calc(var(--dev-setting-title-font-size-px, 12) * 5px);
+        height: calc(var(--dev-setting-title-font-size-px, 12) * 3px);
+        border: 1px solid var(--dev-accent-color, #0ff);
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    .dev-select {
+        background: #222; color: var(--dev-accent-color, #0ff);
+        border: 1px solid var(--dev-accent-color, #0ff);
+        padding: 4px; border-radius: 3px; cursor: pointer;
+        font-family: var(--dev-panel-font-family, monospace); font-size: 10px;
+    }
+
+    /* ============================================================
+       [CSS-10] CAPITALIZE-TEXT TOGGLES
+       ============================================================ */
+    /* 4 independent capitalize toggles, applied on .dev-panel itself by
+       applyDevPanelOwnStyling() (see DEV_PANEL_CAPS_CLASS_MAP) — kept
+       decomposed (one per text category, per CLAUDE.md Section 12n #1's
+       "decompose, don't bundle" rule) rather than a single shared toggle. */
+    .dev-panel.dev-caps-button-text .dev-buttons button,
+    .dev-panel.dev-caps-button-text .dev-hide-btn,
+    .dev-panel.dev-caps-button-text .dev-collapse-btn {
+        text-transform: uppercase;
+    }
+    .dev-panel.dev-caps-tab-text .dev-tab-btn { text-transform: uppercase; }
+    .dev-panel.dev-caps-group-names .dev-section-title { text-transform: uppercase; }
+    .dev-panel.dev-caps-settings-text .dev-label { text-transform: uppercase; }
+
+/* ====================================================================
+   FONTSO PROJECT STYLES — everything above this banner is the template,
+   everything below is this project's own.
+   ==================================================================== */
+
+/* ---- Page / app stage -------------------------------------------- */
+/* #appStage is the app's root container and the first element registered
+   with the UI Layout Engine (see src/main.js). Its POSITION and SIZE are
+   owned by the engine (--ui-* custom properties written by engine.css);
+   only non-layout styling belongs here. */
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+#appStage {
+    background: #111;
+    overflow: hidden;
+}
+
+/* Placeholder shown while the project has no real content yet. Delete
+   this rule (and its node in index.html) as soon as the app has its own
+   first screen. */
+#appStagePlaceholder {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: #444;
+    font: 13px/1.6 monospace;
+    text-align: center;
+    user-select: none;
+    pointer-events: none;
+}
+
+/* ---- UI Layout Engine Inspector chrome ---------------------------- */
+/* The engine's inspector.mjs emits these class names but ships no chrome
+   CSS of its own (deliberately — "non-layout styling is the host's job",
+   docs/ENGINE_API.md). These rules are the FONTSO host's answer, written
+   against the dev panel's OWN custom properties so the Inspector inherits
+   whatever the "Dev Panel" settings group is currently set to instead of
+   being a second, separately-themed widget inside the same panel. */
+.ui-inspector-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+.ui-inspector-label {
+    color: var(--dev-setting-text-color, #fff);
+    font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+    min-width: 92px;
+}
+.ui-inspector-select,
+.ui-inspector-text-input {
+    background: #111;
+    color: var(--dev-accent-color, #0ff);
+    border: 1px solid var(--dev-accent-color, #0ff);
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+    padding: 2px 4px;
+    flex: 1;
+    min-width: 60px;
+}
+.ui-inspector-button {
+    background: var(--dev-accent-color, #0ff);
+    color: #000;
+    border: none;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: calc(var(--dev-button-text-font-size-px, 11) * 1px);
+    font-weight: bold;
+    cursor: pointer;
+}
+.ui-inspector-section {
+    margin: 8px 0;
+    border-top: 1px solid #333;
+    padding-top: 6px;
+}
+.ui-inspector-section-title {
+    color: var(--dev-accent-color, #0ff);
+    font-weight: bold;
+    margin-bottom: 4px;
+    cursor: pointer;
+}
+.ui-inspector-section-body.ui-inspector-collapsed { display: none; }
+.ui-inspector-hint,
+.ui-inspector-note { color: #6b7280; font-style: italic; }
+.ui-inspector-config-dump {
+    background: #111;
+    color: #9ca3af;
+    padding: 6px;
+    font-size: 9px;
+    max-height: 160px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+.ui-inspector-context-tabs { gap: 4px; }
+.ui-inspector-tab-button { opacity: 0.6; }
+.ui-inspector-tab-active { opacity: 1; box-shadow: 0 0 0 2px #fff inset; }
+.ui-inspector-group-label { color: #9ca3af; font-style: italic; }
+.ui-inspector-add-override-picker {
+    border: 1px dashed var(--dev-accent-color, #0ff);
+    padding: 6px;
+    margin-top: 6px;
+    border-radius: 4px;
+}

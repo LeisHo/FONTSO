@@ -1,0 +1,116 @@
+FONTSO -- PROJECT SUMMARY
+================================================================================
+
+Status: working geometry feasibility prototype (Font Path Laboratory), as of
+2026-09-22, sitting alongside an unused blank HTML scaffold. See
+PROJECT_PROGRESS.md for what's actively being worked on right now, and
+CHANGELOG.txt for the full historical log -- this file stays a mid-altitude
+snapshot, not a duplicate of either.
+
+--------------------------------------------------------------------------------
+OBJECTIVE
+
+Determine whether arbitrary font glyphs can be converted AUTOMATICALLY into
+usable drawable centreline paths -- skeletons derived from each font's own
+outline geometry, not from a hand-authored alphabet. The eventual consumer is
+an animation system that drives an object along a letter's path; this project
+is the geometry engine that would feed it.
+
+Deliberately NOT: a text editor, keyboard input, a finished UI, handwriting
+simulation, human stroke-order reconstruction, a manually authored stroke
+font, or perfect handling of every pathological font. The distinguishing
+requirement is CENTRELINE, not outline: a thick stem must yield approximately
+one path through its middle, never two tracing its edges.
+
+--------------------------------------------------------------------------------
+SCOPE
+
+In scope: the lab/ pipeline (font parsing -> glyph outline -> raster mask ->
+thinning -> skeleton graph -> cleanup -> vector paths -> traversal) and the
+visualiser that makes its output inspectable.
+
+Out of scope / dormant: the root-level HTML scaffold (index.html, src/,
+lib/ui-engine/, api/) built earlier the same day -- the workspace-standard dev
+panel and UI Layout Engine, verified working but not used by the laboratory,
+which deliberately has its own plain debugging chrome. It remains available if
+this project later grows a real front end.
+
+Audience / how it's used: single developer, run locally, inspected visually.
+
+--------------------------------------------------------------------------------
+CURRENT STATE
+
+The full pipeline works end to end in the browser with no backend and no build
+step. Ten single-responsibility modules under lab/src/; only pipeline.mjs
+knows the stage order.
+
+Verified live across 8 font families x 8 characters (A H S O B g & ?) = 64
+runs, zero errors, zero incomplete traversals: Arial, Times New Roman,
+Georgia, Courier Std (OTF/CFF cubic outlines), Comic Sans MS, Ink Free, Segoe
+Script, Gabriola. Per-glyph cost 1.7ms to 77ms at the 256px default raster.
+
+Topology is exact where it can be checked by hand: H = 4 endpoints / 2
+junctions / 5 edges / 1 component; O = 0 endpoints / 0 junctions / 1 loop /
+1 edge; S = 2 endpoints / 1 edge; B = 0 endpoints / 2 junctions / 3 edges.
+Zero orphaned pixels on every glyph tested.
+
+Font-specificity -- the central success criterion -- is confirmed by the same
+letter across faces: Comic Sans 'H' produces 5 segments, Times New Roman /
+Georgia / Courier Std 'H' produce 13, because the serif faces' skeletons
+branch into every serif. Screenshot-confirmed, not inferred.
+
+--------------------------------------------------------------------------------
+DECISIONS
+
+- Raster thinning, not an exact medial axis -- a Voronoi medial axis spawns a
+  branch per boundary bump, and real outlines are full of overshoots and
+  control-point wobble, so it needs MORE pruning than a thinned raster, not
+  less. Chosen over: exact medial axis, outline-pairing heuristics.
+
+- Canvas fill for rasterisation, not a hand-written scanline filler -- the
+  browser already implements the nonzero winding rule correctly, which is
+  exactly what makes a counter come out hollow, and it consumes curve commands
+  directly so no flattening error enters the mask.
+
+- Pixels classified by CROSSING NUMBER, not 8-neighbour count. Neighbour
+  count misreports every diagonal staircase corner as a junction.
+
+- "Is this real or is it noise?" is decided on SOURCE MASK AREA, never on
+  skeleton length. By length a dot and a speck are identical; by area they
+  differ by 2-3 orders of magnitude.
+
+- Cleanup defaults are conservative on purpose. Prettier output means less
+  faithful output, and that trade belongs to the user, not the pipeline.
+
+- Two thinning algorithms (Zhang-Suen, Guo-Hall) are selectable rather than
+  one being assumed best.
+
+- opentype.js is the only dependency, vendored. Everything else is
+  hand-written: thinning is ~60 lines, and the available libraries are OpenCV
+  bindings or Node packages expecting Buffer/Mat.
+
+--------------------------------------------------------------------------------
+KNOWN LIMITATIONS
+
+- Thinning nibbles stroke ends; terminals sit slightly inside the true outline.
+- Junction nodes sit at a pixel-clump centroid: topologically right, a pixel
+  or two off geometrically.
+- Serifs produce many short branches (correct, but a consumer wanting "the
+  stem" must classify them).
+- rasterEmHeight 512 costs several hundred ms per glyph.
+- Traversal is a deterministic DFS, explicitly not handwriting stroke order.
+- Hairline faces at low raster resolution can fragment a stroke (untested).
+- A dot (i, ?, :) is a zero-length segment; consumers must handle
+  lengthPx === 0.
+- Untested: non-Latin scripts, variable-font instances, colour/bitmap fonts.
+- The local static server intermittently truncates files above ~250KB, which
+  is a sandbox property, not a project defect.
+
+--------------------------------------------------------------------------------
+NEXT ACTION
+
+No specific next action is pending -- the feasibility question the prototype
+was built to answer has been answered affirmatively. The highest-value
+follow-ups, if work continues, are distance-transform-weighted centring (fixes
+both terminal erosion and junction displacement) and curvature-based stroke
+continuation through junctions. See PROJECT_PROGRESS.md.

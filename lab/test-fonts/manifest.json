@@ -1,0 +1,13 @@
+{
+  "_note": "Convenience list for the local font dropdown. These files are OS-installed fonts copied in for testing and are NOT redistributable - lab/test-fonts/*.ttf|otf is gitignored. The dropdown degrades to 'none found' if the files are absent; the file picker always works.",
+  "fonts": [
+    { "file": "arial.ttf",      "label": "Arial (sans-serif)" },
+    { "file": "times.ttf",      "label": "Times New Roman (serif)" },
+    { "file": "georgia.ttf",    "label": "Georgia (serif, slab-ish)" },
+    { "file": "CourierStd.otf", "label": "Courier Std (OTF/CFF cubic)" },
+    { "file": "comic.ttf",      "label": "Comic Sans MS (irregular/humanist)" },
+    { "file": "Inkfree.ttf",    "label": "Ink Free (handwriting)" },
+    { "file": "segoesc.ttf",    "label": "Segoe Script (script)" },
+    { "file": "Gabriola.ttf",   "label": "Gabriola (decorative)" }
+  ]
+}

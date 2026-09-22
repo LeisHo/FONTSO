@@ -1,0 +1,26 @@
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+
+# Scraped/dumped/regenerable inputs, per the workspace CLAUDE.md §11
+# folder convention. data/processed/ is deliberately NOT ignored — the
+# dev-panel settings log and the UI layout config live there and are meant
+# to be tracked (§12l).
+data/raw/
+
+# Local screen recordings (bug-report clips etc.) — never meant to be
+# tracked; a blanket `git add -A` once swept one into a commit on a sibling
+# project before it was caught.
+datalog/
+
+# Laboratory test fonts: OS-installed faces copied in for local testing.
+# Not redistributable, so never committed. The manifest IS tracked.
+lab/test-fonts/*.ttf
+lab/test-fonts/*.otf
+lab/test-fonts/*.woff
+
+# npm is used only to fetch opentype.js, which is then vendored into
+# lab/lib/. No build step, no runtime dependency on node_modules.
+node_modules/
+package-lock.json

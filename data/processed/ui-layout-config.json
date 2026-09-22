@@ -1,0 +1,13 @@
+{
+  "_README": "UI Layout Engine (global CLAUDE.md §13) layout INTENT for this project, one entry per registered element, keyed by the same id src/main.js passes to createUIElement(). This is git-tracked declared intent, not resolved geometry — the engine turns it into native CSS custom properties/classes at runtime (see lib/ui-engine/engine.css). Edit it here, or live via the dev panel's UI Layout Inspector; the Inspector's own Save writes back through the storage backend src/main.js registers.",
+
+  "appStage": {
+    "_comment": "The app root. Covers the full viewport. Deliberately NOT size:fill — fill resolves via flexbox and is only meaningful inside a flow parent (see engine.css's .ui-size-w-fill); this element's parent is <body>, not a flex container, so an explicit fixed 100vw/100vh is the correct mode, exactly as the engine's own demo/config.json does for its stage.",
+    "layout": {
+      "position": { "mode": "fixed", "viewportAnchor": "top-left", "offset": { "x": "0px", "y": "0px" } },
+      "size": { "width": { "mode": "fixed", "value": "100vw" }, "height": { "mode": "fixed", "value": "100vh" } }
+    },
+    "group": "App Stage",
+    "propertyLabel": "Position & Size"
+  }
+}

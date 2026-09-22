@@ -1,0 +1,420 @@
+FONTSO -- CHANGELOG
+================================================================================
+
+PROJECT START: 2026-09-22
+
+--------------------------------------------------------------------------------
+2026-09-22  -  4:31 AM - 4:38 AM
+
+Created FONTSO as a blank HTML project scaffold: the workspace-standard dev
+panel (CLAUDE.md S12) and UI Layout Engine (S13), wired together and verified
+working, with no application features. The folder already existed and was a
+copy of HANDYSET -- 150,899 bytes of three.js hand-rig code in src/main.js,
+HANDYSET's own 42,997-byte CLAUDE.md, and its filled-in docs. All 10 of those
+inherited files were MOVED to data/raw/inherited-handyset-2026-09-22/, not
+deleted (CLAUDE.md S11: "nothing gets deleted by default"); that folder is
+gitignored and nothing live reads it.
+
+Added:
+- src/devpanel/devPanel.js -- the <script> block of
+  .claude/TEMPLATE_DEV_PANEL.html, copied verbatim, differing by exactly one
+  inserted line (plus a 5-line comment explaining it) at the template's own
+  documented [JS-14] splice point: `if (window.renderFontsoDevGroups)
+  window.renderFontsoDevGroups();`. 4,570 lines.
+- src/style.css -- the template's <style> block verbatim (877 lines, Part 1),
+  then this project's own page styling and the host-side chrome for the UI
+  Layout Inspector (Part 2). A banner comment marks the boundary.
+- index.html -- the template's <body> markup and its early html.dev-mode
+  <head> script, both verbatim, plus the #appStage root, the two stylesheet
+  links, and the two deferred scripts. Script order is load-bearing and
+  documented in its own <head> comment: src/main.js (a module) must run
+  before src/devpanel/devPanel.js (a classic script given `defer` so it joins
+  the same deferred queue), or devPanel.js's eager ensureDevPanelBuilt() call
+  finds no window.renderFontsoDevGroups to invoke.
+- lib/ui-engine/ -- UI Layout Engine v0.2.6 vendored from
+  J:\CLAUDE\PROJECTS\HTML UI ENGINE\. All 11 files (9 .mjs + engine.css +
+  tokens.json) confirmed byte-identical to the canonical source via `cmp`.
+- src/main.js -- the host half of the ENGINE_API.md contract. Registers
+  #appStage from git-tracked intent in data/processed/ui-layout-config.json;
+  bridges the dev panel's Desktop/Mobile/Landscape device rule to the
+  engine's base/mobilePortrait/mobileLandscape contexts via
+  setActiveContextOverride(), so the two can never disagree about which
+  context is active (the mismatch DEV_PANEL_ADAPTER.md S13.1 documents);
+  mounts the engine's Inspector as a panel-level "UI Layout" group; and adds
+  the optional S12l git-tracked persistence on top of localStorage.
+- addRow() in src/main.js -- the single choke point every future control
+  passes through. It sets ctrl.tab='desktop' and collects the control for
+  registerDevControlArray(), closing the two silent-failure traps the shared
+  template warns about (a wrong per-row device checkbox, and a
+  "Show in Mobile/Landscape" checkbox that toggles but creates no row).
+  Zero project controls exist yet -- this is wiring for the first one.
+- api/save-settings.js -- the S12l Vercel write-through, generalized from the
+  inherited copy. GITHUB_REPO now has NO hardcoded default (this project has
+  no repo yet; a wrong default would fail confusingly or write somewhere
+  unintended). Inert until its env vars and the client-side secret are set;
+  localStorage carries everything until then.
+- scripts/active/serve.py -- local dev server, adapted from the engine's own
+  demo/serve.py. Required, not optional: `python -m http.server` sends .mjs
+  as text/plain and browsers reject that for <script type="module">, so every
+  engine import fails. Also sends Cache-Control: no-store.
+- CLAUDE.md, README.md, and the CLAUDE.md S11 folder skeleton (src/, lib/,
+  data/processed + data/raw, scripts/active + scripts/archive, docs/, api/).
+- docs/PROJECT_SUMMARY.txt, CODE_SUMMARY.txt, PROJECT_PROGRESS.md, HANDOFF.md
+  and this file, generated from the .claude/TEMPLATE_* standards and left as
+  BLANK templates per direct instruction. The scaffold's own technical facts
+  (file map, the verbatim-copy rule, 8 inherited gotchas, the deliberate
+  architecture exceptions) live in CLAUDE.md instead, so nothing is lost by
+  those four staying empty until FONTSO has a purpose.
+
+Decisions:
+- The "UI Layout" Inspector group is PANEL-LEVEL, not one copy per tab --
+  beside "Saved Dev Settings", outside all three tab-content roots. Same
+  precedent S12d sets for the same reason: the Inspector carries its own
+  Base/Mobile Portrait/Mobile Landscape context tabs, so one instance already
+  covers all three. It would also mirror into the other tabs as an empty
+  shell if it lived inside them, since cross-tab mirroring can only copy
+  registered control rows (the same reason the built-in "Mouse Log" is
+  excluded from mirroring by name).
+- HANDYSET's per-group cascade RETENTION feature was deliberately NOT carried
+  over. It exists only in that project's own copy of devPanel.js and was
+  never folded back into .claude/TEMPLATE_DEV_PANEL.html; FONTSO tracks the
+  canonical template. If that behaviour is wanted here, it should go into the
+  template first, then be re-copied.
+- remotePutSettings() does GET -> merge -> POST, never a blind POST. The
+  settings file holds several independent top-level keys (devPanel,
+  uiLayoutConfig) written by different code paths; a blind overwrite from
+  either silently erases the other.
+
+Verified (live, http://localhost:8420, real browser):
+- All 11 engine modules, both scripts, both stylesheets and the layout config
+  return 200 OK. Zero JavaScript console errors. The only 404s are
+  /favicon.ico and /api/save-settings -- the latter is the expected,
+  silently-handled localStorage fallback path with no serverless runtime
+  running locally.
+- Panel chrome renders in full: 8 header icon buttons, COPY/RESET/SYNC,
+  Search, the "Saved Dev Settings" group with SAVE/USE/DELETE/SET DEFAULT,
+  the Desktop/Mobile/Landscape tabs, and both mandatory built-in groups
+  ("Dev Panel" with its 3 subgroups, "Debug" with Mouse Log).
+- Both template CSS fixes are present and working: the group cascade checkbox
+  computes to display:block with real width (not the old hardcoded
+  display:none), and .dev-section-title computes to position:relative (so
+  that checkbox anchors to the title bar, not the whole group).
+- S12b, the specific silent-failure the template demands a LIVE check for: a
+  temporary in-page probe control added exactly the way addRow() adds one got
+  the correct checkbox kind ("Show in Mobile/Landscape", not "Independent
+  from Desktop"), and checking it genuinely created sliderMobileProbe and
+  sliderLandscapeProbe rows. Probe was in-page only; nothing written to disk,
+  and a reload confirmed it gone.
+- Engine end-to-end: the Inspector's element picker showed the 2-level
+  Object/Property cascade ("App Stage" -> "Position & Size"), all 3 context
+  tabs, Position/Size-Width/Size-Height sections (Constraints correctly
+  absent -- that section was never configured for this element), all 5
+  position and 6 size modes. Editing offsetX from 0px to 40px moved
+  #appStage's computed `left` from 0px to 40px; reverting returned it to 0px.
+
+Not verified:
+- The api/save-settings.js write-through against a real Vercel deployment --
+  no deployment, no repo, and neither secret configured yet. Only its local
+  absence (the localStorage fallback) was exercised.
+
+--------------------------------------------------------------------------------
+2026-09-22  -  4:44 AM - 5:00 AM
+
+Built the Font Path Laboratory (lab/): a browser feasibility prototype
+testing whether arbitrary font glyphs can be converted automatically into
+usable drawable centreline paths. No hand-authored letterforms, no stroke
+font, no per-character tables -- every skeleton is derived at runtime from
+the supplied font's own outline. Ten single-responsibility modules; only
+pipeline.mjs knows the stage order.
+
+Pipeline: glyph outline (opentype.js) -> canvas-filled binary mask ->
+Zhang-Suen / Guo-Hall thinning -> crossing-number graph (nodes/edges/
+components) -> prune+simplify+smooth cleanup -> path segments in both
+raster px and font units -> deterministic traversal with explicit pen-up
+connectors -> layered canvas visualiser with a constant-speed animator.
+
+Added:
+- lab/src/{config,fontLoader,glyphExtract,rasterize,skeletonize,
+  skeletonGraph,cleanup,vectorize,traversal,pipeline}.mjs plus
+  viz/{renderer,animator}.mjs and app.mjs.
+- lab/lib/opentype.mjs -- opentype.js 2.0.0 (MIT), vendored MINIFIED
+  build. The 494KB unminified build was intermittently truncated by the
+  local static server (200 OK alongside net::ERR_CONNECTION_RESET),
+  silently breaking the entire module graph; 245KB is served reliably.
+- lab/README.md, lab/test-fonts/manifest.json (font files gitignored).
+- .gitignore rules for test fonts and node_modules.
+
+Fixed (all five found by measurement during live testing, not by review):
+- Pixel classification used raw 8-neighbour COUNT instead of crossing
+  number. A diagonal staircase corner has 3 neighbours but is not a
+  junction, so Comic Sans 'O' reported 23 junctions (it has none) and 'H'
+  reported 3 endpoints (it has 4). Since glyphs are mostly curves, nearly
+  every diagonal pixel was misclassified.
+- Edge tracing picked "any neighbour that isn't the previous one", which
+  doubles back at a staircase corner. Now prefers a neighbour not
+  8-adjacent to the previous pixel.
+- Redundant-pixel removal tested ring transitions (T==1), which misses
+  the common corner case: ring order says N and W are far apart, but they
+  physically touch. Now counts true connected groups among the neighbours.
+  This eliminated a phantom 'loop-anchor' node and bogus 1px edge that
+  every glyph tested was carrying.
+- Tiny-component filtering measured SKELETON LENGTH, which destroyed the
+  dot of '?', '!', ':' and 'i' -- measured at 3.4px, 3.8px, 2.4px/5.8px
+  and a single pixel respectively, indistinguishable from noise by that
+  measure. Now measures SOURCE MASK AREA, where a real dot is hundreds of
+  pixels and a speck is single digits. An intermediate attempt that
+  deleted tiny self-loops' PIXELS was also wrong and reverted: it severed
+  Comic Sans 'H' (4 endpoints/2 junctions/1 component -> 5/1/2), because
+  those pixels are the junction's connective tissue. The edge is noise;
+  the ink is not.
+- describeFont() read font.names.fontFamily flat, but opentype.js v2
+  nests names under names.windows / names.macintosh, so every font
+  displayed its filename instead of its name.
+- lab.css hardcoded `height: calc(100% - 41px)` for the header; the
+  header wraps, so content overflowed (755px in a 720px viewport).
+  Replaced with flex.
+- loadFontFromUrl() now retries 3x: Arial (1.0MB) and Gabriola (1.8MB)
+  intermittently failed to load, Gabriola needing 3 attempts in one run.
+
+Verified (live, real browser, real fonts):
+- 8 fonts x 8 characters (A H S O B g & ?) = 64 runs, zero errors, zero
+  incomplete traversals: Arial, Times New Roman, Georgia, Courier Std
+  (OTF/CFF cubic), Comic Sans MS, Ink Free, Segoe Script, Gabriola.
+- Topology is exact where it can be checked by hand: H = 4 endpoints /
+  2 junctions / 5 edges / 1 component; O = 0/0/1 loop/1 edge; S = 2
+  endpoints / 1 edge; B = 0 endpoints / 2 junctions / 3 edges. Zero
+  orphaned pixels on every glyph tested.
+- Font-specificity confirmed by edge count on the SAME letter: Comic Sans
+  'H' = 5 segments, Times/Georgia/Courier 'H' = 13, because the serif
+  faces' skeletons branch into every serif. Screenshot-confirmed.
+- Animation advances at constant speed and wraps correctly (242px ->
+  79.5px across a 316.5px route at 220px/s over 0.7s).
+- Per-glyph pipeline cost 1.7ms to 77ms at the 256px default.
+
+Not verified:
+- Non-Latin scripts, variable-font instances, colour/bitmap fonts.
+- Hairline faces at low rasterEmHeight (expected to fragment; untested).
+
+--------------------------------------------------------------------------------
+2026-09-22  -  5:03 AM - 5:07 AM
+
+Follow-up to the entry above, recorded separately rather than editing it
+(CHANGELOG is append-only): fixed the local server flake properly instead of
+leaving it as a documented annoyance.
+
+Fixed:
+- scripts/active/serve.py repeatedly failed to deliver lab/lib/opentype.mjs
+  (net::ERR_CONNECTION_RESET with no status), which silently broke the entire
+  ES module graph -- the page loaded, the canvas rendered its placeholder, and
+  window.fontLab was undefined, with no error pointing at the cause. It hit
+  the largest file every time and survived shrinking that file from 494KB to
+  245KB, so size alone was not the trigger. Two changes: protocol_version is
+  now HTTP/1.1 (the default HTTP/1.0 closes the socket after every response,
+  and a page load requests ~20 files -- that connection churn was the real
+  cause), and /lib/ is served cacheable (max-age=3600) while project code
+  stays no-store, so the large vendored bundle is transferred once rather
+  than on every reload. Also swallows ConnectionAborted/Reset/BrokenPipe in
+  copyfile (normal when a browser navigates away mid-transfer) and quietens
+  per-request logging to errors only.
+
+Verified:
+- 5 consecutive cold page loads, all with window.fontLab defined. Before the
+  fix the failure recurred within 2 consecutive attempts.
+- Comic Sans 'B' end to end after the fix: 3 segments, 1 component, 40ms,
+  12-row pipeline report, 9,128 characters of debug JSON.
+- Animator confirmed advancing (0 -> 20.4px of a 569.9px route across 19
+  animation frames). An earlier reading of 0 was the sandbox's own
+  requestAnimationFrame throttling on an unobserved browser-pane tab, not an
+  application defect -- frames only advance while the tab is actually being
+  rendered, which is a known property of this environment.
+
+--------------------------------------------------------------------------------
+2026-09-22  -  5:30 AM - 5:35 AM
+
+Migrated the Font Path Laboratory onto the workspace-standard dev panel
+(CLAUDE.md S12), and added a new "Path" group of rendering controls
+requested via S12g shorthand.
+
+Added:
+- lab/devpanel.js and lab/devpanel.css -- the <script> and <style> blocks of
+  .claude/TEMPLATE_DEV_PANEL.html, copied VERBATIM, the script differing by
+  exactly one inserted line at the template's own [JS-14] splice point.
+  This is a SECOND independent copy alongside the root scaffold's in src/ --
+  deliberate, so lab/ stays liftable into another project as a whole.
+- 8 laboratory groups registered into the panel from src/app.mjs: Font &
+  Character, Layers, Path, Animation, Rasterisation, Skeletonisation,
+  Cleanup, Traversal. All 17 config.mjs parameters are now exposed with
+  units inline in the label (S12n); the old bespoke side panel surfaced only
+  6, so the other 11 could previously only be changed by editing source.
+- Pipeline Report and Path Data (JSON) as nested subgroups of the mandatory
+  built-in Debug group (S12i-1), rather than inventing a top-level group.
+- Hand-built widget rows (file input, test-character buttons, play/restart,
+  status lines, report, JSON) marked data-skip-device-checkbox, the same way
+  the built-in Mouse Log widget is -- single-instance widgets with no
+  meaningful Mobile/Landscape counterpart.
+- NEW "Path" group (4 controls, per direct request):
+    Path Thickness On/Off        - renders the centreline as a real stroke
+    Path Thickness (Px)          - 1-40, default 8
+    Path Color                   - colour picker, default the skeleton green
+    Progressive Thickness On/Off - thickness applies only to the portion the
+                                   animated dot has already travelled
+  Range and default for thickness were CHOSEN, not specified: 1px is the
+  thinnest visible stroke and ~40px is roughly a Comic Sans stem at the
+  256px default raster, past which the path stops reading as a path.
+- renderer.mjs gains DEFAULT_VIEW + setViewSettings(). These are RENDER-ONLY
+  settings, deliberately NOT in config.mjs: that file is the pipeline's
+  parameter set and every change to it re-runs the whole glyph->skeleton
+  pass. A colour change must not cost a re-run.
+
+Removed:
+- The bespoke side panel, top bar, and ~120 lines of lab.css. The canvas is
+  now full-bleed with the dev panel floating over it. lab.css keeps only the
+  canvas, the legend, and the hand-built widgets -- the latter styled from
+  the panel's OWN custom properties so they follow whatever the built-in
+  "Dev Panel" group is set to instead of being separately themed.
+
+Decisions:
+- Config controls are wired by ONE DELEGATED listener on #devPanel, not per
+  element. Per-element wiring reaches Desktop controls only; the panel
+  creates a Mobile/Landscape twin on demand when its checkbox is ticked,
+  long after wire-up, so a twin would move, show a new value and drive
+  nothing at all -- silently, with no error. Delegation plus the template's
+  own resolveDevControlId() wires every twin, present or future, for free.
+- All three tabs drive the SAME config value on purpose. Pipeline parameters
+  are not device-specific: a glyph's skeleton does not depend on the
+  viewport it is inspected in. S12f's per-device independence is for an
+  app's spatial styling, which this is not.
+- Progressive inking is drawn by drawCleanSkeleton(), not drawDot(), so it
+  survives turning the "Animated Dot" layer off -- the inked path is a
+  property of the path, not of the dot marker. The dot's own faint wake is
+  suppressed while progressive inking is active, since stacking the two
+  muddies the chosen colour.
+- Path thickness is scaled by the view transform, so the panel's number
+  means raster pixels, not screen pixels; otherwise the stroke would stay a
+  constant screen width while the glyph zoomed underneath it.
+
+Verified (live, real browser, driving the REAL panel controls):
+- 10 groups present (2 built-in + 8 laboratory), 87 rows, clean load.
+- S12b, the silent failure the template demands a live check for: ticking
+  "Show in Mobile/Landscape" on sliderMinBranchLengthPx genuinely created
+  sliderMobileMinBranchLengthPx and sliderLandscapeMinBranchLengthPx. Zero
+  hand-built rows were wrongly given a device checkbox.
+- The Mobile twin genuinely drives the pipeline: editing
+  sliderMobileSimplifyTolerancePx moved config 0.8 -> 3.5 and re-ran the
+  pipeline (68 -> 14 polyline points); editing the Desktop control back
+  synced the twin to match.
+- Panel self-styling works (accent colour #005f8f -> #ff8800 applied to the
+  live CSS custom property). Sync persists 44,026 bytes to localStorage.
+- Full Comic Sans sweep through the real character buttons after migration
+  is IDENTICAL to pre-migration: A 6e/1c, H 5e/1c, S 1e/1c, O 1e/1c,
+  B 3e/1c, g 2e/1c, & 7e/1c, ? 2e/2c. No regression.
+- Path group: thickness 16px + colour #ff3366 renders the S centreline as a
+  thick pink stroke inside the glyph; progressive mode confirmed across 3
+  real animation frames, inking in from the top while the remainder stays a
+  thin centreline (21.7% progress, 46 trail points).
+
+Testing note worth keeping:
+- Delegated wiring cannot be tested with `new Event('change')` -- it does
+  not bubble, never reaches the panel, and produces a false negative
+  indistinguishable from broken code. It cost one wrong diagnosis here
+  before being spotted. Use `new Event('change', {bubbles: true})`. Same
+  family as the documented `.click()`-vs-pointerdown trap.
+
+--------------------------------------------------------------------------------
+2026-09-22  -  5:47 AM - 5:50 AM
+
+Added the centreline->outline tween (new "Path Tween" dev-panel group) and
+an Animation Path selector, both requested via S12g shorthand.
+
+Interpretation, since it drove the whole design: "a tween between the
+produced centre line and the glyph outline" means TWO curves per skeleton
+edge (hence the plural), offset perpendicular to the path by
+progression x local half-thickness. At progression 0 both collapse onto the
+centreline; at 1 they land on the outline.
+
+Added:
+- lab/src/distanceTransform.mjs -- exact Euclidean distance transform,
+  Felzenszwalb & Huttenlocher's linear-time separable algorithm. This
+  supplies the local half-thickness: the distance from a skeleton pixel to
+  the nearest background pixel IS the inscribed-circle radius there, i.e.
+  exactly how far the centreline must move to reach the outline. Nothing
+  else in the pipeline can provide it. An approximate chamfer DT was
+  rejected deliberately -- its error is direction-dependent, so it would
+  read on screen as the tween drifting off the outline on diagonals but
+  not on stems: visible, and impossible to tune away. Also provides a
+  bilinear sampler, because the skeleton's own points are fractional
+  (junction centroids, simplified/smoothed polylines) and nearest-neighbour
+  sampling of them produces a radius that steps in 1px jumps, visible as a
+  scalloped tween edge.
+- lab/src/tween.mjs -- the morph itself: per-point normals (central
+  difference, wrapping on closed loops), normal smoothing with
+  re-normalisation, radius smoothing, optional resampling and terminal
+  extension, plus tweenAnimationRoute() which flattens the tween curves
+  into the {flat, cumulative, totalLength} shape the animator consumes.
+- NEW "Path Tween" group (8 controls):
+    Path Tween On/Off
+    Tween Progression (0-1)     - the headline control
+    Radius Scale (X)            - corrects the systematic under-reach
+    Radius Smoothing (Passes)   - damps the junction spike
+    Normal Smoothing (Passes)   - stops the offset wobbling
+    Resample Spacing (Px)       - RDP leaves 2-point runs that cannot
+                                  follow a changing radius
+    Extend Terminals (Px)       - compensates thinning's end erosion
+    Both Sides On/Off
+- Animation Path dropdown in the Animation group: Midline (skeleton) or
+  Tween path. Falls back to the midline whenever the tween is off or
+  empty, rather than leaving the animator with no route -- a dropdown set
+  to Tween with the tween disabled would otherwise stop the dot dead.
+  Preserves fractional position across a switch so the dot does not snap
+  back to the start.
+- "Tween Curves" layer toggle.
+
+Decisions:
+- The tween is RENDER-ONLY. The distance field is computed once per
+  pipeline run (5.2ms) and handed out on the result; tween controls
+  re-offset the cached polylines (O(points)) and redraw. Putting them in
+  config.mjs would have made every slider tick a full re-rasterise and
+  re-thin.
+- Progression 1 is exact only where the normal genuinely points at the
+  nearest boundary -- true along any ordinary stroke, false at terminals
+  (thinning erodes ends inward), junctions (the medial axis is genuinely
+  ambiguous; the inscribed circle exceeds either stroke's half-width) and
+  sharp corners (the offset self-intersects on the inner side). This is
+  documented rather than hidden, and three of the fine-tuning controls
+  exist specifically for the first two. Corner self-intersection is left
+  visible on purpose: in a laboratory that is more informative than a
+  silently clipped curve.
+- Normal smoothing re-normalises after averaging. Skipping that would
+  shorten the vector wherever neighbouring normals disagree, quietly
+  reducing the offset exactly at the corners where it matters most.
+
+Verified (live, real browser, driving the REAL panel controls):
+- Distance transform sanity on Comic Sans H at 256px: 12.00px at a stem
+  centre against a ~24px stem (exactly half), max 15.62px at the
+  stem/crossbar junction -- the predicted inscribed-circle overshoot.
+  5.2ms for a 173x213 field.
+- Offset is exactly linear in progression: median offset 0.00 / 3.00 /
+  6.00 / 12.00 at progression 0 / 0.25 / 0.5 / 1, against a 12.00px
+  median radius. Progression 0 gives exactly zero offset.
+- Screenshots at 0.5 (curves halfway between centreline and outline, both
+  sides of every stroke) and at 1.0 with the skeleton layer off (curves
+  tracing the glyph edges; the visible gap at the rounded terminals is the
+  documented thinning erosion).
+- Every fine-tuning control measurably does what it claims: Radius Scale
+  1.0->1.15 moved max offset 13.60->15.64 (exactly x1.15); Extend
+  Terminals 0->8 added one point per free end (45->47); Resample 2->6px
+  took 45 points to 16; Both Sides off nulls the right curve.
+- Animation Path: midline route 625.6px, tween route 1721px, switching
+  back returns 625.6px. On the tween route the dot measures 0.3-1.6px
+  from a tween curve and 10-12.7px from the midline (about the stem
+  half-width) across four sampled fractions -- it is genuinely riding the
+  tween geometry, not the midline.
+
+--------------------------------------------------------------------------------
+<next entry follows the same divider + dated-header pattern>
+
+================================================================================
+APPEND-ONLY. Never rewrite, reorder, or delete a prior entry, even to fix
+formatting (CLAUDE.md §4a / Never-Skip rule #3). If an entry needs a
+correction, add a new entry noting the correction rather than editing the
+old one in place.

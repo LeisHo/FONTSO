@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Font Path Laboratory</title>
+<!-- ====================================================================
+     Font Path Laboratory
+     ====================================================================
+     A geometry research tool, not an app. The dev-panel markup below
+     (between the two "PROJECT:" markers) and the html.dev-mode <head>
+     script immediately following are copied VERBATIM from
+     J:\CLAUDE\PROJECTS\.claude\TEMPLATE_DEV_PANEL.html per workspace
+     CLAUDE.md S12. Every laboratory control is registered into that
+     panel from src/app.mjs - see renderFontLabDevGroups().
+
+     SCRIPT ORDER MATTERS (both deferred, so they run in DOCUMENT order):
+       1. src/app.mjs - type="module", therefore deferred. Defines
+          window.renderFontLabDevGroups before devpanel.js runs.
+       2. devpanel.js - a classic script given `defer` so it joins the
+          same deferred queue. Its eager ensureDevPanelBuilt() call
+          invokes renderFontLabDevGroups at the template's splice point;
+          if app.mjs had not run first that call would silently find
+          nothing to render.
+     ==================================================================== -->
+<!-- Sets html.dev-mode SYNCHRONOUSLY, before the rest of the page
+     parses/downloads, so the CSS below (search "html.dev-mode") can
+     gate the panel's visibility from the very first paint with zero
+     flash for a non-dev visitor - see LAZY-BUILD (search that phrase
+     below, [JS-14]) for the other half of this: even a dev-allowed
+     visitor's PANEL CONTENTS aren't actually built until first opened
+     (or immediately, for a dev-allowed visitor - see ensureDevPanelBuilt()).
+     Ported from a real project's own dev panel, which hit a real,
+     reported "ghost of the dev panel flashing on screen for non-dev
+     visitors" bug from gating visibility any later than this (a
+     same-purpose check further down, in the main script, was already
+     there for the D-key/DEV-button GATING logic, but ran far too late
+     for VISIBILITY - only once the whole trailing script had already
+     downloaded and executed) - MAINTENANCE note above. PROJECT: this
+     exact isDevAllowed condition is duplicated in the main script below
+     (search "const isDevAllowed") - keep both in sync if you change the
+     gating rule; they can't share one declaration since this one has to
+     run before the main script even exists in the DOM. -->
+<script>
+    (function() {
+        var isDevAllowed = location.protocol === 'file:' ||
+            location.hostname === 'localhost' ||
+            location.hostname === '127.0.0.1' ||
+            new URLSearchParams(location.search).get('dev') === '1';
+        if (isDevAllowed) document.documentElement.classList.add('dev-mode');
+    })();
+</script>
+<link rel="stylesheet" href="devpanel.css">
+<link rel="stylesheet" href="lab.css?v=2">
+</head>
+<body>
+
+    <!-- The laboratory itself: a full-bleed canvas. Every control now
+         lives in the dev panel, so nothing competes with the geometry. -->
+    <canvas id="view"></canvas>
+    <div id="legend" class="legend"></div>
+
+
+    <!-- PROJECT: your own game content goes above this block. -->
+
+    <button class="dev-toggle-btn" id="devToggleBtn" onclick="ensureDevPanelBuilt(); devPanel.classList.toggle('hidden')">DEV</button>
+
+    <div class="dev-panel" id="devPanel">
+        <div class="dev-panel-scroll-content">
+            <div class="dev-header" id="devPanelHeader">
+                <span class="dev-panel-title">DEV</span>
+                <div class="dev-header-buttons">
+                    <!-- Text Edit Mode / Add Group / Collapse All - moved here from
+                         their previous spots (a standalone checkbox above the tabs,
+                         and a per-tab "+ Add Group" text button) per direct request
+                         ("Text Edit Mode and Add Group are now icon buttons on the
+                         Dev Panel Title Label bit. Also provide a 'Collapse All'
+                         button there.") - see setupDevHeaderIconButtons() for their
+                         wiring. Add Group and Collapse All now operate on whichever
+                         tab is currently ACTIVE (getActiveDevPanelTab()), since a
+                         single shared header button can't be tab-specific the way 3
+                         separate per-tab buttons were. -->
+                    <button class="dev-header-icon-btn" id="devTextEditModeBtn" title="Toggle Label Rename Mode">✎</button>
+                    <button class="dev-header-icon-btn" id="devAddGroupBtn" title="Add Group (right-click: select settings/groups to fold in)">+</button>
+                    <!-- Delete Group/Setting (2026-09-17, ported from Clicko) - a plain
+                         click arms it (no left/right distinction needed, unlike Add
+                         Group); the next click on any group OR individual setting
+                         deletes it. Refuses the 2 mandatory built-in groups (Dev
+                         Panel/Debug) or a setting inside one - see
+                         findDevDeleteProtectionReason(). This template has no lock-
+                         groups feature (Clicko-only), so unlike Clicko's own port of
+                         this button there is no locked-group refusal case here. -->
+                    <button class="dev-header-icon-btn" id="devDeleteGroupBtn" title="Delete Group/Setting (click, then click a group or setting to delete it)">🗑</button>
+                    <!-- Undo (2026-09-17, ported from Clicko) - session-only, in-memory,
+                         cleared on Sync. See setupDevPanelUndo() for the full
+                         mechanism, including the native-color-picker stuck-gesture fix. -->
+                    <button class="dev-header-icon-btn" id="devUndoBtn" title="Undo (Ctrl+Z) - undoes any dev panel change back to the last Sync">↶</button>
+                    <button class="dev-header-icon-btn" id="devCollapseAllBtn" title="Collapse All Groups">⊟</button>
+                    <!-- Sync (Save), also in the header - ported from Clicko
+                         (2026-09-19, "add a Sync (save) button on the dev
+                         panel top label as well. Both buttns will exist"),
+                         so it's reachable without scrolling back down to the
+                         .dev-buttons row below (same motivation as the
+                         header's own sticky+z-index fix above). Calls the
+                         SAME saveDevPanelSettings() the original SYNC button
+                         already does, not a separate save path - see
+                         flashDevHeaderSyncStatus()'s own comment for the
+                         "Saved" indicator this button shows on click. -->
+                    <button class="dev-header-icon-btn" id="devHeaderSyncBtn" onclick="saveDevPanelSettings()" title="Sync (Save)">💾</button>
+                    <button class="dev-collapse-btn" id="devCollapseBtn" onclick="toggleDevPanelCollapsed()">▁</button>
+                    <button class="dev-hide-btn" onclick="devPanel.classList.add('hidden')">X</button>
+                </div>
+            </div>
+
+            <div class="dev-buttons">
+                <button onclick="copyDevPanelSettings()">COPY</button>
+                <button onclick="resetDevPanelSettings()">RESET</button>
+                <button onclick="saveDevPanelSettings()">SYNC</button>
+                <span class="dev-save-sync-status" id="devSaveSyncStatus"></span>
+            </div>
+
+            <!-- Search (2026-09-17) - Ctrl+F-style finder for group/setting
+                 names in the currently active tab, ported from DickoClicko.
+                 See setupDevSearch()'s own comment for the full mechanism. -->
+            <div class="dev-search-row">
+                <input type="text" id="devSearchInput" class="dev-search-input" placeholder="Search..." autocomplete="off">
+                <span class="dev-search-count" id="devSearchCount"></span>
+            </div>
+
+            <!-- Named Setting States (Save/Use/Delete/Set as Default) -
+                 per direct request, modeled on Hando's own preset
+                 picker generalized to the whole panel's state - see
+                 [JS-13b]'s own comment for the full account. Sits right
+                 under Copy/Sync/Reset per that same request. Wrapped in a
+                 collapsible "Saved Dev Settings" group (2026-09-14, direct
+                 request, also making this whole feature mandatory
+                 standard scaffolding - CLAUDE.md §12d) - a single,
+                 PANEL-LEVEL group (not tripled per tab, unlike Dev Panel/
+                 Debug - a saved state snapshot covers the whole panel
+                 across all 3 tabs at once, so there's only ever one of
+                 these). Deliberately NOT part of the per-tab reorderable
+                 group system (setupDragReorder/section-order persistence/
+                 drag-handle-injection are all scoped to search inside
+                 #desktopTabContent etc. - this sits outside all 3, same
+                 level as Copy/Sync/Reset and Text Edit Mode below) - just
+                 reuses the plain .dev-section/-title/-content markup for
+                 its collapse/expand behavior, since toggleSection() itself
+                 has no dependency on where in the DOM its target lives. -->
+            <div class="dev-section">
+                <div class="dev-section-title" onclick="toggleSection(this)">▼ Saved Dev Settings</div>
+                <div class="dev-section-content">
+                    <select class="dev-select" id="devSavedStatesSelect" style="width:100%; margin-bottom:5px;"></select>
+                    <div class="dev-buttons">
+                        <button onclick="saveNamedDevPanelState()">SAVE</button>
+                        <button onclick="useNamedDevPanelState()">USE</button>
+                        <button onclick="deleteNamedDevPanelState()">DELETE</button>
+                        <button onclick="setNamedDevPanelStateAsDefault()">SET DEFAULT</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Edit Mode moved to a header icon button
+                 (#devTextEditModeBtn, 2026-09-16) - no longer a standalone
+                 checkbox row here. captureFullDevPanelState()/
+                 applyFullDevPanelState() already track textEditModeEnabled
+                 as its own top-level field regardless of where its control
+                 lives in the DOM, so this move needed no change to
+                 Copy/Sync/Reset. -->
+            <div class="dev-tabs">
+                <button class="dev-tab-btn active" id="devTabDesktopBtn" onclick="switchDevPanelTab('desktop')">DESKTOP</button>
+                <button class="dev-tab-btn" id="devTabMobileBtn" onclick="switchDevPanelTab('mobile')">MOBILE</button>
+                <button class="dev-tab-btn" id="devTabLandscapeBtn" onclick="switchDevPanelTab('landscape')">LANDSCAPE</button>
+            </div>
+
+            <div id="desktopTabContent">
+                <!-- The built-in "Dev Panel" group is always placed FIRST
+                     by default (its own static markup position, first
+                     child of this tab, per CLAUDE.md Section 12i) - a
+                     project's own render*Controls() calls only ever
+                     APPEND new groups after it (see this file's own
+                     top-of-file usage note step 3), so it stays first
+                     unless a user explicitly drags it elsewhere. -->
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Dev Panel">▼ Dev Panel</div>
+                    <div class="dev-section-content"></div>
+                </div>
+                <!-- 2nd mandatory built-in group, same standing-scaffolding
+                     status as "Dev Panel" above (CLAUDE.md §12i-1, added
+                     2026-09-14, direct request: "any new project MUST
+                     include the Dev Panel settings group as well as the
+                     Debug Group") - holds the built-in Mouse Log feature
+                     ([JS-13c], desktop-tab-only instance) plus whatever
+                     debug toggles a project adds later. -->
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Debug">▼ Debug</div>
+                    <div class="dev-section-content"></div>
+                </div>
+                <!-- PROJECT: your own groups go here, or are appended by your own render*Controls() calls. -->
+            </div>
+
+            <div id="mobileTabContent" class="hidden">
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Dev Panel">▼ Dev Panel</div>
+                    <div class="dev-section-content"></div>
+                </div>
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Debug">▼ Debug</div>
+                    <div class="dev-section-content"></div>
+                </div>
+            </div>
+
+            <div id="landscapeTabContent" class="hidden">
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Dev Panel">▼ Dev Panel</div>
+                    <div class="dev-section-content"></div>
+                </div>
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Debug">▼ Debug</div>
+                    <div class="dev-section-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dev-panel-resize-edge edge-top" id="devPanelResizeTop"></div>
+        <div class="dev-panel-resize-edge edge-bottom" id="devPanelResizeBottom"></div>
+        <div class="dev-panel-resize-edge edge-left" id="devPanelResizeLeft"></div>
+        <div class="dev-panel-resize-edge edge-right" id="devPanelResizeRight"></div>
+        <div class="dev-panel-resize-corner corner-tl" id="devPanelResizeTL"></div>
+        <div class="dev-panel-resize-corner corner-tr" id="devPanelResizeTR"></div>
+        <div class="dev-panel-resize-corner corner-bl" id="devPanelResizeBL"></div>
+        <div class="dev-panel-resize-corner corner-br" id="devPanelResizeBR"></div>
+    </div>
+
+    <!-- PROJECT: your own game content goes below this block. -->
+
+
+    <!-- See the script-order note in the <head> comment before
+         reordering, removing `defer`, or changing either type. -->
+    <script type="module" src="src/app.mjs?v=2"></script>
+    <script defer src="devpanel.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+/* ====================================================================
+   Font Path Laboratory — lab.css
+   ====================================================================
+   The laboratory's OWN page styling only. Everything that used to be
+   here for the side panel, the top bar, the toggle grid, the parameter
+   rows and the JSON pane is gone: those controls now live in the
+   workspace-standard dev panel, whose chrome is devpanel.css (a verbatim
+   copy of the shared template — loaded BEFORE this file).
+
+   What remains is the three things the dev panel does not own: the
+   full-bleed canvas, the colour legend, and the two hand-built widgets
+   (pipeline report, debug JSON) that the panel hosts but cannot style
+   generically, since the template's row builders only cover
+   slider/colour/select/checkbox/text inputs.
+   ==================================================================== */
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #0d1117;
+    color: #c9d1d9;
+    font: 13px/1.45 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+
+/* The whole viewport is the geometry. Nothing overlaps it except the
+   dev panel, which floats and can be moved or hidden with D. */
+#view {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+}
+
+.legend {
+    position: fixed;
+    left: 10px;
+    bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    max-width: calc(100vw - 20px);
+    font-size: 11px;
+    color: #8b949e;
+    pointer-events: none;
+    z-index: 10;
+}
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+
+/* ---- Hand-built widgets hosted inside dev-panel groups -------------
+   Scoped under .dev-row / .dev-section-content so they inherit the
+   panel's own box model, and coloured from the panel's OWN custom
+   properties so they follow whatever the built-in "Dev Panel" settings
+   group is currently set to rather than being separately themed. */
+
+.lab-file-input {
+    width: 100%;
+    font-family: inherit;
+    font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+    color: var(--dev-setting-text-color, #fff);
+}
+.lab-file-input::file-selector-button {
+    background: var(--dev-accent-color, #0ff);
+    color: #000;
+    border: none;
+    border-radius: 3px;
+    padding: 3px 8px;
+    margin-right: 8px;
+    font-family: inherit;
+    font-size: calc(var(--dev-button-text-font-size-px, 11) * 1px);
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Test-character buttons: a dense grid, since there are eight of them
+   and they are pressed constantly while comparing faces. */
+.lab-charbtns { display: flex; flex-wrap: wrap; gap: 3px; }
+.lab-charbtns button {
+    min-width: 28px;
+    padding: 2px 5px;
+    font-size: 13px;
+}
+.lab-charbtns button.active {
+    outline: 2px solid var(--dev-accent-color, #0ff);
+    outline-offset: -2px;
+}
+
+.lab-status {
+    font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+    color: #8b949e;
+    word-break: break-word;
+}
+.lab-status.error { color: #ff6b81; }
+.lab-status.warn { color: #ffd230; }
+.lab-status.ok { color: #31d67a; }
+
+.lab-report { display: grid; grid-template-columns: auto 1fr; gap: 1px 8px; font-size: 11px; }
+.lab-report b { color: #8b949e; font-weight: normal; white-space: nowrap; }
+.lab-report span { color: #c9d1d9; word-break: break-word; }
+.lab-line-warn { color: #ffd230; font-size: 11px; }
+.lab-line-err { color: #ff6b81; font-size: 11px; }
+
+.lab-json {
+    max-height: 300px;
+    overflow: auto;
+    background: #0a0e14;
+    border: 1px solid #21262d;
+    border-radius: 3px;
+    padding: 6px;
+    font-size: 10px;
+    line-height: 1.35;
+    color: #9fb1c1;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 4px 0 0;
+}

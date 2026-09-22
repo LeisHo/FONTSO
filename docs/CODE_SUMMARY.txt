@@ -1,0 +1,159 @@
+FONTSO -- CODE SUMMARY
+================================================================================
+
+Status: see ../README.md for the project-structure layout and how to run it;
+this file is a quick orientation pointer into the actual code, not a
+duplicate of the README's tree.
+
+--------------------------------------------------------------------------------
+FILE MAP
+
+THE LABORATORY (lab/) -- the live project.
+
+- `lab/index.html` -- mount point: a full-bleed canvas plus the dev
+  panel's markup, copied verbatim from the shared template.
+- `lab/devpanel.js`, `lab/devpanel.css` -- the workspace-standard dev
+  panel, a VERBATIM copy of .claude/TEMPLATE_DEV_PANEL.html's <script>
+  and <style> blocks (the script differing by exactly one splice line).
+  A second, independent copy from the root scaffold's, so lab/ stays
+  liftable as a whole.
+- `lab/lab.css` -- only what the panel does not own: the canvas, the
+  legend, and the hand-built widgets (file input, char buttons, report,
+  JSON), styled from the panel's own custom properties so they follow
+  its theming.
+- `lab/lib/opentype.mjs` -- opentype.js 2.0.0 (MIT), vendored MINIFIED build.
+  The only dependency. Minified deliberately: see the gotchas below.
+- `lab/src/config.mjs` -- EVERY tunable number in the pipeline, each with a
+  note on what breaks at either extreme. No other module hard-codes a
+  threshold. Start here when tuning.
+- `lab/src/fontLoader.mjs` -- stage 0. The only module that knows opentype
+  exists; everything downstream sees plain geometry.
+- `lab/src/glyphExtract.mjs` -- stage 1. Character -> real outline commands
+  plus flattened contours. Owns the coordinate-space contract.
+- `lab/src/rasterize.mjs` -- stage 2. Outline -> binary mask via canvas fill.
+  Also labels mask components and their areas.
+- `lab/src/skeletonize.mjs` -- stage 3. Zhang-Suen / Guo-Hall thinning plus
+  redundant-pixel removal.
+- `lab/src/skeletonGraph.mjs` -- stage 4. Skeleton -> nodes/edges/components.
+- `lab/src/cleanup.mjs` -- stage 5. Spur pruning, speck dropping, RDP
+  simplification, Chaikin smoothing.
+- `lab/src/vectorize.mjs` -- stage 6. Graph -> segments in raster px AND font
+  units, with the transform relating them.
+- `lab/src/traversal.mjs` -- stage 7. Graph -> ordered route with explicit
+  pen-up connectors.
+- `lab/src/distanceTransform.mjs` -- exact Euclidean distance transform
+  (Felzenszwalb, linear-time separable). Supplies the local stroke
+  half-thickness that the tween needs; nothing else in the pipeline can
+  provide it (the skeleton knows where the middle is, not how thick the
+  stroke is around it). Approximate chamfer DTs were rejected: their
+  error is direction-dependent and would show as the tween drifting off
+  the outline on diagonals but not on stems.
+- `lab/src/tween.mjs` -- centreline -> outline morph. Two offset curves
+  per skeleton edge at progression x radius, plus the fine-tuning
+  (radius scale/smoothing, normal smoothing, resampling, terminal
+  extension) and the animation route built from the tween geometry.
+- `lab/src/pipeline.mjs` -- orchestration and the debug-JSON projection. The
+  ONLY file that knows the stage order.
+- `lab/src/viz/renderer.mjs` -- layered canvas renderer. Also owns
+  DEFAULT_VIEW, the RENDER-ONLY settings (path thickness / colour /
+  progressive inking). Deliberately NOT in config.mjs: that is the
+  pipeline's parameter set and every change to it re-runs the whole
+  glyph->skeleton pass, which would be pure waste for a colour change.
+- `lab/src/viz/animator.mjs` -- constant-speed dot along the route.
+- `lab/src/app.mjs` -- UI wiring. Contains no geometry. Registers every
+  laboratory control into the dev panel via window.renderFontLabDevGroups
+  (7 groups: Font & Character, Layers, Animation, Rasterisation,
+  Skeletonisation, Cleanup, Traversal), plus the pipeline report and
+  debug JSON as subgroups of the built-in Debug group.
+- `lab/test-fonts/` -- OS faces copied in for comparison. Gitignored;
+  manifest.json is tracked.
+
+THE SCAFFOLD (root) -- built earlier, currently unused by the laboratory.
+Kept because it is verified working and is the workspace standard if this
+project ever grows a real front end. `index.html`, `src/main.js`,
+`src/style.css`, `src/devpanel/devPanel.js` (verbatim template copy),
+`lib/ui-engine/` (vendored v0.2.6), `api/save-settings.js`.
+
+- `scripts/active/serve.py` -- the dev server. Required, not optional.
+- `data/raw/inherited-handyset-2026-09-22/` -- pre-existing HANDYSET files
+  moved aside, not deleted. Gitignored. Nothing live reads them.
+
+--------------------------------------------------------------------------------
+ARCHITECTURE
+
+Strictly linear, one direction, no stage importing another stage:
+
+  font file
+    -> fontLoader      (opentype parse)
+    -> glyphExtract    (outline commands + contours, font units)
+    -> rasterize       (binary mask + mask-component labels/areas)
+    -> skeletonize     (1px skeleton)
+    -> skeletonGraph   (nodes / edges / components)
+    -> cleanup         (prune -> REBUILD graph -> repeat, then simplify/smooth)
+    -> vectorize       (segments in px + font units)
+    -> traversal       (ordered route + connectors)
+    -> viz             (render + animate)
+
+pipeline.mjs is the only file that knows this order. cleanup.mjs and
+skeletonGraph.mjs have a deliberate two-way relationship: cleanup prunes by
+ERASING PIXELS from the bitmap and the pipeline then rebuilds the graph from
+scratch, rather than performing incremental graph surgery. Slower, and immune
+to the desynchronisation bugs that approach invites.
+
+Three coordinate spaces exist and are never mixed implicitly: font units
+(opentype's own), raster px (the mask), screen px (the canvas). glyphExtract
+declares the contract; rasterize emits the explicit toRaster/toFont pair;
+vectorize reports geometry in BOTH px and font units so no consumer is
+coupled to whatever rasterEmHeight happened to be set.
+
+--------------------------------------------------------------------------------
+UNTOUCHABLE SYSTEMS
+
+- `src/devpanel/devPanel.js` and Part 1 of `src/style.css` are verbatim copies
+  of `.claude/TEMPLATE_DEV_PANEL.html`. Fix bugs in the template, then
+  re-copy -- never in place. (Scaffold only; the laboratory does not use them.)
+- `lib/ui-engine/*` is vendored. Fix in `HTML UI ENGINE/`, then re-vendor.
+
+--------------------------------------------------------------------------------
+GOTCHAS
+
+- `python -m http.server` CANNOT serve this project -- it sends .mjs as
+  text/plain and browsers reject that for ES modules. Use
+  scripts/active/serve.py.
+- The local static server intermittently truncates responses above ~250KB
+  (200 OK alongside net::ERR_CONNECTION_RESET), which silently breaks the
+  whole module graph or a font load. This is why opentype.js is vendored
+  minified and why loadFontFromUrl retries three times. If the lab loads with
+  `window.fontLab` undefined, retry the navigation before suspecting code.
+- Pixel classification MUST use crossing number, not 8-neighbour count. A
+  diagonal staircase corner has 3 neighbours and is not a junction.
+- Redundant-pixel removal MUST count true connected groups among a pixel's
+  neighbours, not ring transitions. Ring order says N and W are far apart;
+  they physically touch.
+- Never delete a tiny self-loop's PIXELS -- only the edge. Those pixels are a
+  junction's connective tissue; deleting them severed Comic Sans 'H'.
+- Never filter components by skeleton LENGTH. A dot and a speck are
+  indistinguishable by length. Use source mask area.
+- opentype.js v2 nests the name table under names.windows / names.macintosh,
+  not flat at names.fontFamily.
+- Browser-pane JS evaluation is throttled hard when the pane is hidden; a
+  multi-font sweep will time out. Front the tab first.
+- The distance field is computed ONCE per pipeline run and handed out on
+  the result. Tween settings re-offset the cached polylines against it
+  (O(points)) and redraw -- they never re-rasterise or re-thin. Moving a
+  tween control into config.mjs would silently make every slider tick a
+  full pipeline pass.
+- Pipeline parameters (config.mjs) re-run the pipeline on change;
+  render-only settings (renderer.mjs's DEFAULT_VIEW) only redraw. The
+  delegated listener routes each control id to the right one via
+  CONFIG_BY_CONTROL_ID / VIEW_BY_CONTROL_ID. Putting a render setting in
+  the wrong map costs a full pipeline re-run per slider tick.
+- Dev-panel config controls are wired by ONE DELEGATED listener on
+  #devPanel, never per element. A Mobile/Landscape twin is created only
+  when its checkbox is ticked, long after wire-up, so per-element
+  listeners would leave it driving nothing -- silently.
+- Testing that delegated wiring requires a BUBBLING event:
+  `new Event('change')` does not bubble and will never reach the panel,
+  producing a false negative that looks exactly like broken code. Use
+  `new Event('change', {bubbles: true})`. Same family as the documented
+  `.click()`-vs-pointerdown trap in the template's own notes.

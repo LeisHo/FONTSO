@@ -1,0 +1,128 @@
+/* ui-layout-engine v0.1.0 — canonical source: J:\CLAUDE\PROJECTS\HTML UI ENGINE\engine.css
+ *
+ * The static CSS that does the ACTUAL layout work. registry.mjs/engine.mjs
+ * only ever compute a small set of CSS custom properties, classes, and
+ * attributes (see engine.mjs's resolveElementLayout()) and apply them to a
+ * DOM node — every rule below is what turns those into real positioning,
+ * using native browser layout primitives. This is the concrete evidence for
+ * Architecture Section 3's core principle: "the Layout Engine does not
+ * replace CSS layout" — ~95% of what makes an element actually end up in
+ * the right place is a plain CSS rule here, not JavaScript.
+ *
+ * Every element an application registers with the engine needs the
+ * `.ui-element` base class (host applies this, or createUIElement's
+ * caller does — see docs/ENGINE_API.md) plus whatever `ui-mode-*` /
+ * `ui-size-*` classes the engine applies at resolve time.
+ */
+
+.ui-element {
+  box-sizing: border-box;
+}
+
+/* ============================================================
+   POSITION MODES
+   ============================================================ */
+
+/* flow — no positioning rules at all. The parent's own flex/grid layout
+   (established by the HOST, per docs/ENGINE_API.md — the engine only
+   asserts the parent/child DOM relationship, it never creates the parent's
+   own flex/grid container) is what actually places a flow element. `order`
+   and `alignment` are the only things this mode itself contributes. */
+.ui-mode-flow {
+  order: var(--ui-order, 0);
+}
+.ui-mode-flow[data-ui-align="start"] { align-self: flex-start; }
+.ui-mode-flow[data-ui-align="center"] { align-self: center; }
+.ui-mode-flow[data-ui-align="end"] { align-self: flex-end; }
+.ui-mode-flow[data-ui-align="stretch"] { align-self: stretch; }
+
+/* anchor — position:absolute against the nearest positioned ancestor
+   (typically a `.ui-containing-block`-flagged element, or the page itself).
+   The specific inset property used depends on data-anchor-h/-v, so the
+   element sits flush to the requested edge with the requested offset. */
+.ui-mode-anchor {
+  position: absolute;
+}
+.ui-mode-anchor[data-anchor-h="left"] { left: var(--ui-offset-x, 0); right: auto; }
+.ui-mode-anchor[data-anchor-h="right"] { right: var(--ui-offset-x, 0); left: auto; }
+.ui-mode-anchor[data-anchor-h="center"] { left: 50%; right: auto; transform: translateX(calc(-50% + var(--ui-offset-x, 0px))); }
+.ui-mode-anchor[data-anchor-v="top"] { top: var(--ui-offset-y, 0); bottom: auto; }
+.ui-mode-anchor[data-anchor-v="bottom"] { bottom: var(--ui-offset-y, 0); top: auto; }
+.ui-mode-anchor[data-anchor-v="center"] { top: 50%; bottom: auto; transform: translateY(calc(-50% + var(--ui-offset-y, 0px))); }
+/* Both axes centered: combine the two transforms rather than letting the
+   later rule silently clobber the earlier one (CSS's own cascade would
+   otherwise apply whichever single-axis transform rule appears last in the
+   stylesheet, dropping the other axis entirely). */
+.ui-mode-anchor[data-anchor-h="center"][data-anchor-v="center"] {
+  left: 50%; top: 50%; right: auto; bottom: auto;
+  transform: translate(calc(-50% + var(--ui-offset-x, 0px)), calc(-50% + var(--ui-offset-y, 0px)));
+}
+
+/* fixed — position:fixed against the viewport. Same inset-property pattern
+   as anchor, plus the 3x3 named viewport anchors from data-viewport-anchor. */
+.ui-mode-fixed {
+  position: fixed;
+}
+.ui-mode-fixed[data-viewport-anchor="top-left"] { top: var(--ui-offset-y, 0); left: var(--ui-offset-x, 0); }
+.ui-mode-fixed[data-viewport-anchor="top-center"] { top: var(--ui-offset-y, 0); left: 50%; transform: translateX(-50%); }
+.ui-mode-fixed[data-viewport-anchor="top-right"] { top: var(--ui-offset-y, 0); right: var(--ui-offset-x, 0); }
+.ui-mode-fixed[data-viewport-anchor="center-left"] { top: 50%; left: var(--ui-offset-x, 0); transform: translateY(-50%); }
+.ui-mode-fixed[data-viewport-anchor="center"] { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.ui-mode-fixed[data-viewport-anchor="center-right"] { top: 50%; right: var(--ui-offset-x, 0); transform: translateY(-50%); }
+.ui-mode-fixed[data-viewport-anchor="bottom-left"] { bottom: var(--ui-offset-y, 0); left: var(--ui-offset-x, 0); }
+.ui-mode-fixed[data-viewport-anchor="bottom-center"] { bottom: var(--ui-offset-y, 0); left: 50%; transform: translateX(-50%); }
+.ui-mode-fixed[data-viewport-anchor="bottom-right"] { bottom: var(--ui-offset-y, 0); right: var(--ui-offset-x, 0); }
+
+/* absolute — explicit x/y inside a declared containing block. */
+.ui-mode-absolute {
+  position: absolute;
+  left: var(--ui-x, 0);
+  top: var(--ui-y, 0);
+}
+
+/* Any element referenced by another element's `containingBlock` field gets
+   this class (registry.mjs applies it) so it establishes a real CSS
+   containing block for its absolute-mode children — a CSS-mechanics side
+   effect, never a DOM-structure mutation (see docs/ENGINE_API.md). */
+.ui-containing-block {
+  position: relative;
+}
+
+/* relative — CSS Anchor Positioning primary path is intentionally NOT
+   wired up in v0.1.0 (deferred past MVP, see Architecture Section 23 /
+   Implementation Plan Section 7) — the mode class exists so choosing
+   `relative` doesn't crash, but resolves to no visible positioning yet. */
+.ui-mode-relative {
+  position: absolute;
+}
+
+/* ============================================================
+   SIZE MODES — width axis
+   ============================================================ */
+.ui-size-w-content { width: max-content; }
+.ui-size-w-fixed { width: var(--ui-width, auto); }
+.ui-size-w-fill { flex: 1 1 0; min-width: 0; }
+.ui-size-w-clamp { width: clamp(var(--ui-width-min, 0px), var(--ui-width-preferred, 50%), var(--ui-width-max, 100%)); }
+.ui-size-w-aspect { aspect-ratio: var(--ui-width-ratio, 1/1); }
+
+/* ============================================================
+   SIZE MODES — height axis
+   ============================================================ */
+.ui-size-h-content { height: max-content; }
+.ui-size-h-fixed { height: var(--ui-height, auto); }
+.ui-size-h-fill { flex: 1 1 0; min-height: 0; }
+.ui-size-h-clamp { height: clamp(var(--ui-height-min, 0px), var(--ui-height-preferred, 50%), var(--ui-height-max, 100%)); }
+.ui-size-h-aspect { aspect-ratio: var(--ui-height-ratio, 1/1); }
+
+/* ============================================================
+   CONSTRAINTS — CSS-first clamp for the knowable case (fixed/anchor
+   elements whose own width/height is declared, not content-dependent).
+   A content-sized element's clamp is handled by the small JS fallback in
+   registry.mjs (documented there) since CSS alone can't know an intrinsic
+   size ahead of layout — see Architecture Section 6/8's own honest
+   accounting of exactly this gap.
+   ============================================================ */
+.ui-constraint-viewport {
+  max-width: 100vw;
+  max-height: 100vh;
+}
