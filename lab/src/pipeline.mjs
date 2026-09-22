@@ -21,7 +21,7 @@
 // ====================================================================
 
 import { makeConfig } from './config.mjs';
-import { extractGlyph } from './glyphExtract.mjs';
+import { extractText } from './glyphExtract.mjs';
 import { rasterizeGlyph, labelMaskComponents } from './rasterize.mjs';
 import { distanceTransform } from './distanceTransform.mjs';
 import { skeletonize } from './skeletonize.mjs';
@@ -30,7 +30,10 @@ import { pruneSpurs, dropTinyComponents, dropTinySelfLoops, cleanupEdgeGeometry 
 import { vectorizeGraph } from './vectorize.mjs';
 import { buildTraversal } from './traversal.mjs';
 
-export function runPipeline(font, char, configOverrides = {}) {
+// `text` may be a single character or a whole string -- extractText
+// handles both, and everything downstream is identical either way (see
+// that function's own note on why the layout happens at extraction).
+export function runPipeline(font, text, configOverrides = {}) {
     const config = makeConfig(configOverrides);
     const timings = {};
     const warnings = [];
@@ -47,7 +50,10 @@ export function runPipeline(font, char, configOverrides = {}) {
     // going white-screen — the brief asks explicitly for graceful
     // failure on problematic geometry.
     try {
-        const glyph = t('extract', () => extractGlyph(font, char));
+        const glyph = t('extract', () => extractText(font, text, {
+            kerning: config.useKerning,
+            letterSpacing: config.letterSpacingUnits,
+        }));
         const raster = t('rasterize', () => rasterizeGlyph(glyph, config));
 
         if (raster.fillRatio > 0.7) {
@@ -121,7 +127,8 @@ export function runPipeline(font, char, configOverrides = {}) {
 
         return {
             ok: true,
-            char,
+            char: text,
+            text,
             config,
             glyph,
             raster,
@@ -181,6 +188,11 @@ export function toDebugJSON(result, { maxPointsPerSegment = 80 } = {}) {
         timingsMs: result.timings,
         warnings: result.warnings,
         glyph: {
+            text: result.glyph.text,
+            glyphCount: result.glyph.glyphCount,
+            glyphs: result.glyph.glyphs,
+            skipped: result.glyph.skipped,
+            totalAdvance: result.glyph.totalAdvance,
             glyphIndex: result.glyph.glyphIndex,
             glyphName: result.glyph.glyphName,
             unitsPerEm: result.glyph.unitsPerEm,

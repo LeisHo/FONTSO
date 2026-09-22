@@ -36,49 +36,122 @@ export class GlyphExtractError extends Error {
 // rasterisation works) and as a flattened polygon per contour (to draw
 // as a reference overlay, and to compute a tight bounding box that
 // respects curve bulge rather than just control points).
-export function extractGlyph(font, char, { flattenSteps = 24 } = {}) {
-    if (!char || !char.length) throw new GlyphExtractError('No character supplied.');
+// Single character. A thin wrapper over extractText so there is exactly
+// one extraction path to reason about and test — a one-character string
+// is not a special case, it is the degenerate case of the general one.
+export function extractGlyph(font, char, opts = {}) {
+    return extractText(font, char, opts);
+}
 
-    const glyph = font.charToGlyph(char);
-    if (!glyph) throw new GlyphExtractError(`Font has no glyph object for "${char}".`);
+// ====================================================================
+// Whole-string extraction
+// ====================================================================
+// Lays every character's outline out along the baseline using the
+// font's OWN advance widths and kerning, and returns the result in
+// exactly the same shape a single glyph produced.
+//
+// WHY THE LAYOUT LIVES HERE AND NOT IN A LATER STAGE
+// Doing it at extraction means the entire rest of the pipeline is
+// untouched: rasterisation fills one combined path, thinning sees one
+// mask, and the graph's existing connected-component logic separates
+// the letters for free — a 'H' and an 'i' in the same string are simply
+// components, which is what they genuinely are. It also means a joining
+// script face whose letters physically touch merges into one component,
+// which is the honest answer rather than a special case.
+//
+// The alternative — running the whole pipeline once per letter and
+// stitching the results — would have required reworking the renderer,
+// the traversal and the animator to understand a list of results, for
+// no geometric benefit.
+export function extractText(font, text, { flattenSteps = 24, kerning = true, letterSpacing = 0 } = {}) {
+    if (!text || !text.length) throw new GlyphExtractError('No text supplied.');
 
-    const glyphIndex = font.charToGlyphIndex(char);
-    const isNotdef = !(glyphIndex > 0);
+    const chars = Array.from(text); // Array.from, so astral characters stay whole
+    const commands = [];
+    const glyphs = [];
+    const skipped = [];
+    let penX = 0;
+    let prevGlyph = null;
 
-    // Ask for the path at unitsPerEm so the result is already in font
-    // units with no extra scaling: getPath(x, y, fontSize) scales by
-    // fontSize/unitsPerEm internally, so passing unitsPerEm is identity.
-    // y=0 keeps the baseline at y=0. getPath's Y is already flipped to
-    // screen convention (down-positive) by opentype, which is why
-    // `yUp: false` is recorded below rather than silently assumed.
-    const path = glyph.getPath(0, 0, font.unitsPerEm);
-    const commands = path.commands || [];
+    for (const ch of chars) {
+        const glyph = font.charToGlyph(ch);
+        const glyphIndex = font.charToGlyphIndex(ch);
+
+        // Kerning is applied BEFORE this glyph is placed, because it
+        // adjusts the gap left by the previous advance.
+        const kern = kerning ? kernBetween(font, prevGlyph, glyph) : 0;
+        penX += kern;
+
+        // Ask for the path at unitsPerEm so the result is already in font
+        // units with no extra scaling: getPath(x, y, fontSize) scales by
+        // fontSize/unitsPerEm internally, so passing unitsPerEm is
+        // identity, and x lands in font units. y=0 keeps the baseline at
+        // y=0. getPath's Y is already flipped to screen convention
+        // (down-positive) by opentype, which is why `yUp: false` is
+        // recorded below rather than silently assumed.
+        const glyphCommands = glyph ? (glyph.getPath(penX, 0, font.unitsPerEm).commands || []) : [];
+
+        // A blank glyph is NOT an error in a string — a space is a
+        // legitimate character that advances the pen and draws nothing.
+        // It is only an error when the WHOLE string is blank, which is
+        // checked after the loop.
+        if (glyphCommands.length) {
+            commands.push(...glyphCommands);
+        } else {
+            skipped.push({ char: ch, reason: glyph ? 'blank outline' : 'no glyph' });
+        }
+
+        glyphs.push({
+            char: ch,
+            glyphIndex,
+            glyphName: (glyph && glyph.name) || null,
+            advanceWidth: glyph ? glyph.advanceWidth : 0,
+            penX,
+            kerning: kern,
+            hasOutline: glyphCommands.length > 0,
+        });
+
+        penX += (glyph ? glyph.advanceWidth : 0) + letterSpacing;
+        prevGlyph = glyph;
+    }
 
     if (!commands.length) {
         throw new GlyphExtractError(
-            `Glyph for "${char}" has no outline (it is blank — a space, a control character, or an empty glyph).`,
+            `"${text}" produced no outline at all (every character is blank, a control character, or missing from this font).`,
         );
     }
 
     const contours = flattenCommands(commands, flattenSteps);
     const filledContours = contours.filter((c) => c.length >= 3);
     if (!filledContours.length) {
-        throw new GlyphExtractError(`Glyph for "${char}" produced no closed contour with area.`);
+        throw new GlyphExtractError(`"${text}" produced no closed contour with area.`);
     }
 
     const bounds = boundsOfContours(filledContours);
     if (!(bounds.width > 0) || !(bounds.height > 0)) {
-        throw new GlyphExtractError(`Glyph for "${char}" has a degenerate bounding box.`);
+        throw new GlyphExtractError(`"${text}" has a degenerate bounding box.`);
     }
 
+    const first = glyphs[0];
     return {
-        char,
-        glyphIndex,
-        isNotdef,
-        glyphName: glyph.name || null,
-        advanceWidth: glyph.advanceWidth,
+        // `char` is retained under its original name so every downstream
+        // consumer keeps working; for a multi-character string it holds
+        // the whole string.
+        char: text,
+        text,
+        glyphs,
+        skipped,
+        glyphCount: glyphs.length,
+        // Single-glyph fields keep their old meaning for a 1-char string
+        // and describe the FIRST glyph otherwise, so the debug panel's
+        // existing rows stay truthful rather than going undefined.
+        glyphIndex: first.glyphIndex,
+        isNotdef: !(first.glyphIndex > 0),
+        glyphName: first.glyphName,
+        advanceWidth: first.advanceWidth,
+        totalAdvance: penX,
         unitsPerEm: font.unitsPerEm,
-        yUp: false, // getPath() already emits screen-convention Y.
+        yUp: false,
         commands,
         contours: filledContours,
         contourCount: filledContours.length,
@@ -159,6 +232,39 @@ function flattenCommands(commands, steps) {
     // A final contour with no explicit Z. Real fonts do ship these.
     if (current && current.length >= 3) contours.push(current);
     return contours;
+}
+
+// Kerning for one pair, working around a real gap in opentype.js 2.0.0.
+//
+// font.getKerningValue() is implemented as:
+//     const tables = this.position.defaultKerningTables;
+//     return tables ? this.position.getKerningValue(tables, l, r)
+//                   : this.kerningPairs[l + ',' + r] || 0;
+// i.e. when a font has GPOS kerning tables it takes the GPOS path and
+// NEVER falls back to the parsed pair table. Measured on the real files
+// in test-fonts/: Arial parses 909 kerning pairs and Times 867, yet
+// getKerningValue() returns 0 for A/V, T/o and Y/o in both — while
+// font.kerningPairs['36,57'] (A,V in Arial) is right there holding -152.
+// So every string rendered completely unkerned.
+//
+// Consulting the pair table when the official accessor yields nothing
+// recovers the real values without second-guessing it where it does
+// work. Comic Sans genuinely has no kern data at all (0 pairs, no kern
+// table) — that one stays unkerned, correctly.
+function kernBetween(font, left, right) {
+    if (!left || !right) return 0;
+    let value = 0;
+    try {
+        value = font.getKerningValue(left, right) || 0;
+    } catch {
+        value = 0;
+    }
+    if (value === 0 && font.kerningPairs) {
+        const li = left.index !== undefined ? left.index : left;
+        const ri = right.index !== undefined ? right.index : right;
+        value = font.kerningPairs[li + ',' + ri] || 0;
+    }
+    return value;
 }
 
 function boundsOfContours(contours) {

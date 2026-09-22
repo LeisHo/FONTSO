@@ -27,7 +27,7 @@ Open <http://localhost:8420/lab/index.html>.
 visitor. Press **D** to hide/show, **R** to reset, **Ctrl+Z** to undo; it
 is draggable, resizable and collapsible.
 
-Groups: **Font & Character**, **Layers**, **Path**, **Path Tween**, **Animation**,
+Groups: **Font & Character**, **Text**, **Layers**, **Path**, **Path Tween**, **Animation**,
 **Rasterisation**, **Skeletonisation**, **Cleanup**, **Traversal**, plus
 the built-in **Dev Panel** (its own styling) and **Debug** (Mouse Log,
 Pipeline Report, Path Data JSON). All 17 pipeline parameters are exposed.
@@ -131,6 +131,36 @@ Two non-obvious details matter a great deal, both found by measurement:
 - **Redundant pixels are removed by counting connected groups among a
   pixel's neighbours**, not by ring transitions. Ring order says `N` and
   `W` are far apart; in reality they touch.
+
+## Whole strings, not just single letters
+
+The **Text** group's *Display Text* box takes any string. A single
+character is not a special case — it is the one-character case of the
+same path.
+
+The layout happens at **extraction**: every glyph's outline is placed
+along the baseline using the font's own advance widths and kerning, and
+the combined path is handed to rasterisation as one shape. Everything
+downstream is untouched — thinning, the graph, cleanup, traversal and
+the animator all behave exactly as they do for one letter, and separate
+letters simply fall out as separate graph components, which is what they
+are. A joining script face whose letters physically touch merges into
+one component, which is the honest answer rather than a special case.
+
+*Use Kerning* and *Letter Spacing (Font Units)* are the two real knobs
+that layout has, so they are controls rather than buried constants.
+
+**A kerning bug in opentype.js 2.0.0 is worked around here.**
+`font.getKerningValue()` is implemented so that a font with GPOS kerning
+tables takes the GPOS path and never falls back to the parsed pair
+table. Measured on the real files in `test-fonts/`: Arial parses **909**
+kerning pairs and Times **867**, yet `getKerningValue()` returns 0 for
+A/V, T/o and Y/o in both — while `font.kerningPairs['36,57']` (A,V in
+Arial) holds **-152**. Every string rendered completely unkerned.
+`kernBetween()` in `glyphExtract.mjs` consults the pair table when the
+official accessor yields nothing. With it, `AVAVAV` in Arial tightens by
+-152 per pair (-760 total advance, 1031px → 936px raster). Comic Sans
+genuinely has no kern data at all and correctly stays unkerned.
 
 ## The centreline → outline tween
 

@@ -126,6 +126,20 @@ export const DEFAULT_CONFIG = {
     // since it is an area.
     minSourceAreaPx: 24,
 
+    // ---- Text layout -------------------------------------------------
+    // Apply the font's own kerning when laying out a multi-character
+    // string. Off makes letter pairs sit at raw advance width, which is
+    // occasionally useful for seeing what the kern table is actually
+    // doing, but is not how the font is meant to read.
+    useKerning: true,
+
+    // Extra space inserted after every character's advance, in FONT
+    // UNITS (so it scales with the em, not with the raster). Negative
+    // tightens. Useful here for pulling letters apart until their
+    // skeletons stop merging into one component, or pushing them
+    // together to see when they do.
+    letterSpacingUnits: 0,
+
     // ---- Traversal ---------------------------------------------------
     // Emit explicit pen-up connector segments between the end of one
     // drawn segment and the start of the next. These are the hooks a
@@ -157,6 +171,8 @@ export const CONFIG_META = {
     preserveEndpointsWhileSmoothing: { label: 'Preserve endpoints', unit: 'bool', note: 'Protects terminals from erosion.' },
     mergeAdjacentJunctions: { label: 'Merge adjacent junctions', unit: 'bool', note: 'Off = spurious micro-edges at every crossing.' },
     minSourceAreaPx: { label: 'Min source area', unit: 'px^2', min: 0, max: 200, step: 4, note: 'Measured on the MASK, not the skeleton - that is what separates a dot from a speck.' },
+    useKerning: { label: 'Use Kerning', unit: 'bool', note: 'Off = raw advance widths, ignoring the kern table.' },
+    letterSpacingUnits: { label: 'Letter Spacing', unit: 'font units', min: -400, max: 800, step: 10, note: 'Font units, so it scales with the em. Negative tightens.' },
     emitConnectors: { label: 'Emit connectors', unit: 'bool', note: 'Pen-up moves between segments.' },
     traversalResampleSpacingPx: { label: 'Traversal resample spacing', unit: 'px', min: 0, max: 10, step: 0.5, note: '0 = uneven animation speed.' },
 };

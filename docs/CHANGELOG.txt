@@ -518,6 +518,70 @@ Correction to an earlier entry:
   verification simply did not establish it.
 
 --------------------------------------------------------------------------------
+2026-09-22  -  6:01 AM - 6:04 AM
+
+Added multi-character text rendering (new "Text" dev-panel group with a
+Display Text box), replacing single-character-only input.
+
+Approach: the string layout happens at EXTRACTION, not as a new stage.
+extractText() places every glyph's outline along the baseline using the
+font's own advance widths and kerning and returns one combined path in
+exactly the shape a single glyph produced, so rasterisation, thinning,
+the graph, cleanup, traversal and the animator are all completely
+untouched. Separate letters fall out as separate graph components, which
+is what they genuinely are; a joining script face whose letters touch
+merges into one component, which is the honest answer rather than a
+special case. The alternative -- running the pipeline once per letter and
+stitching results -- would have required reworking the renderer, the
+traversal and the animator for no geometric benefit.
+
+Added:
+- extractText(font, text, {kerning, letterSpacing}) in glyphExtract.mjs.
+  extractGlyph() is now a thin wrapper over it, so there is exactly one
+  extraction path to reason about and test. Uses Array.from so astral
+  characters stay whole. A blank glyph (a space) advances the pen and
+  draws nothing rather than erroring -- only a string with NO renderable
+  glyph at all is a failure.
+- NEW "Text" group: Display Text (text box), Use Kerning On/Off, Letter
+  Spacing (Font Units, -400..800). The two layout knobs get controls per
+  S12n rather than being buried constants.
+- Per-glyph breakdown in the debug JSON (char, glyphIndex, glyphName,
+  advanceWidth, penX, kerning, hasOutline) plus totalAdvance and a list
+  of skipped characters.
+- setText() as the single source of truth: the Display Text box, the
+  Character field and the test-character buttons all route through it, so
+  there are never two competing values for what is being rendered.
+
+Fixed (found while verifying the above):
+- opentype.js 2.0.0's font.getKerningValue() never falls back to the
+  parsed pair table. Its implementation is
+    const t = this.position.defaultKerningTables;
+    return t ? this.position.getKerningValue(t,l,r) : this.kerningPairs[l+','+r]||0
+  so any font WITH GPOS kerning tables takes the GPOS branch, which
+  returns 0 for these files, and the parsed pairs are never consulted.
+  Measured: Arial parses 909 kerning pairs and Times 867, yet
+  getKerningValue() returns 0 for A/V, T/o and Y/o in both, while
+  font.kerningPairs['36,57'] (A,V in Arial) holds -152. Every string
+  would have rendered completely unkerned. kernBetween() now consults
+  kerningPairs when the official accessor yields nothing, without
+  second-guessing it where it does work.
+
+Verified (live, real browser, driving the real controls):
+- Single-character regression: 'A' in Comic Sans gives 1 glyph,
+  161x197 raster, 1 component, 6 edges -- identical to its pre-change
+  baseline. The generalisation did not disturb the single-glyph path.
+- 'HI' -> 2 glyphs / 2 components; 'Hello' -> 5 glyphs / 5 components /
+  588x220 / 93.5ms; 'A B' -> 3 glyphs but 2 components, confirming a
+  space advances the pen without drawing.
+- Kerning after the fix, Arial 'AVAVAV': -152 applied per pair (5 pairs,
+  -760 total advance), raster 1031px -> 936px. Off gives all zeros.
+  Comic Sans stays at zero, correctly -- it has no kern table and 0
+  parsed pairs.
+- Letter Spacing +300 font units widens the raster 1052px -> 1240px.
+- Screenshot of 'Hello' shows five separate centrelines with pen-up
+  connectors between the letters.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

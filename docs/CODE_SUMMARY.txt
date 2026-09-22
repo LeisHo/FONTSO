@@ -28,8 +28,12 @@ THE LABORATORY (lab/) -- the live project.
   threshold. Start here when tuning.
 - `lab/src/fontLoader.mjs` -- stage 0. The only module that knows opentype
   exists; everything downstream sees plain geometry.
-- `lab/src/glyphExtract.mjs` -- stage 1. Character -> real outline commands
-  plus flattened contours. Owns the coordinate-space contract.
+- `lab/src/glyphExtract.mjs` -- stage 1. TEXT (any string, one character
+  being the degenerate case) -> real outline commands plus flattened
+  contours. Lays glyphs out along the baseline with the font's own
+  advance widths and kerning, so everything downstream is unchanged and
+  separate letters fall out as separate graph components. Owns the
+  coordinate-space contract.
 - `lab/src/rasterize.mjs` -- stage 2. Outline -> binary mask via canvas fill.
   Also labels mask components and their areas.
 - `lab/src/skeletonize.mjs` -- stage 3. Zhang-Suen / Guo-Hall thinning plus
@@ -136,6 +140,13 @@ GOTCHAS
   indistinguishable by length. Use source mask area.
 - opentype.js v2 nests the name table under names.windows / names.macintosh,
   not flat at names.fontFamily.
+- opentype.js 2.0.0's font.getKerningValue() takes the GPOS path whenever
+  a font has GPOS kerning tables and NEVER falls back to the parsed pair
+  table, returning 0 even when the pair exists. Measured: Arial parses
+  909 pairs, Times 867, both return 0 for A/V while kerningPairs holds
+  -152. kernBetween() in glyphExtract.mjs consults kerningPairs when the
+  accessor yields nothing. Do not "simplify" it back to a bare
+  getKerningValue() call -- that silently un-kerns every string.
 - Browser-pane JS evaluation is throttled hard when the pane is hidden; a
   multi-font sweep will time out. Front the tab first.
 - The distance field is computed ONCE per pipeline run and handed out on

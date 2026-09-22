@@ -43,9 +43,11 @@ const state = {
     tween: { ...DEFAULT_TWEEN },
     // 'midline' | 'tween' - which geometry the animated dot follows.
     animationPath: 'midline',
+    // The string to render. A single character is just the one-character
+    // case; the pipeline does not distinguish them.
+    text: 'A',
     result: null,
     debug: null,
-    char: 'A',
 };
 
 const canvas = document.getElementById('view');
@@ -62,6 +64,7 @@ const ui = {
     playBtn: null,
     scrub: null,
     charInput: null,
+    textInput: null,
     charButtons: [],
 };
 
@@ -73,6 +76,7 @@ const ui = {
 // changed by editing source.
 const GROUPS = {
     FONT: 'Font & Character',
+    TEXT: 'Text',
     LAYERS: 'Layers',
     PATH: 'Path',
     TWEEN: 'Path Tween',
@@ -204,12 +208,12 @@ function buildFontGroup() {
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'dev-text-input';
-        input.value = state.char;
+        input.value = state.text.length === 1 ? state.text : '';
         input.maxLength = 2;
         input.style.width = '48px';
         input.style.textAlign = 'center';
-        input.addEventListener('change', () => { state.char = input.value; rerun(); });
-        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { state.char = input.value; rerun(); } });
+        input.addEventListener('change', () => setText(input.value, input));
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') setText(input.value, input); });
         ui.charInput = input;
         row.append(label, input);
     });
@@ -220,11 +224,7 @@ function buildFontGroup() {
         for (const ch of TEST_CHARS) {
             const b = document.createElement('button');
             b.textContent = ch;
-            b.addEventListener('click', () => {
-                state.char = ch;
-                if (ui.charInput) ui.charInput.value = ch;
-                rerun();
-            });
+            b.addEventListener('click', () => setText(ch, null));
             ui.charButtons.push(b);
             wrap.appendChild(b);
         }
@@ -639,6 +639,58 @@ function applyAnimationRoute() {
     animator.seekToFraction(fraction);
 }
 
+
+// "Text" — type a whole string instead of picking one letter. The
+// pipeline treats a single character as the one-character case of a
+// string, so nothing here is a separate code path (see extractText).
+//
+// The text box is the SINGLE SOURCE OF TRUTH for what gets rendered.
+// The Character field and the test-character buttons in the Font group
+// are quick setters that write into it, so there are never two
+// competing values for "what am I looking at".
+function buildTextGroup() {
+    const content = makeGroup(GROUPS.TEXT);
+
+    customRow(content, (row) => {
+        const label = document.createElement('span');
+        label.className = 'dev-label';
+        label.textContent = 'Display Text:';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'dev-text-input';
+        input.value = state.text;
+        input.style.width = '100%';
+        const commit = () => { setText(input.value, input); };
+        input.addEventListener('change', commit);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') commit(); });
+        ui.textInput = input;
+        row.append(label, input);
+    });
+
+    const controls = [
+        addRow(GROUPS.TEXT, {
+            id: 'checkboxUseKerning', type: 'checkbox',
+            label: 'Use Kerning', value: state.config.useKerning,
+        }),
+        addRow(GROUPS.TEXT, {
+            id: 'sliderLetterSpacingUnits', type: 'slider', label: 'Letter Spacing (Font Units)',
+            min: -400, max: 800, step: 10, value: state.config.letterSpacingUnits,
+        }),
+    ];
+    CONFIG_BY_CONTROL_ID.checkboxUseKerning = 'useKerning';
+    CONFIG_BY_CONTROL_ID.sliderLetterSpacingUnits = 'letterSpacingUnits';
+    window.renderControlArray(controls, 'buildTextGroup');
+}
+
+// One place that changes what is rendered, so every entry point (the
+// text box, the Character field, the test buttons) stays in agreement.
+function setText(value, origin) {
+    state.text = value;
+    if (ui.textInput && ui.textInput !== origin) ui.textInput.value = value;
+    if (ui.charInput && ui.charInput !== origin) ui.charInput.value = value.length === 1 ? value : '';
+    rerun();
+}
+
 // The pipeline report and the debug JSON go into the mandatory built-in
 // "Debug" group (§12i-1) as nested subgroups, rather than inventing a
 // top-level group for them — that group exists precisely for this.
@@ -675,7 +727,7 @@ function buildDebugWidgets() {
             const blob = new Blob([JSON.stringify(state.debug, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `fontpath-${(state.fontInfo && state.fontInfo.familyName) || 'font'}-${state.char || 'x'}.json`;
+            a.download = `fontpath-${(state.fontInfo && state.fontInfo.familyName) || 'font'}-${(state.text || 'x').slice(0, 12)}.json`;
             a.click();
             URL.revokeObjectURL(a.href);
         });
@@ -693,6 +745,7 @@ function buildDebugWidgets() {
 // module (module top-level declarations never reach global scope).
 window.renderFontLabDevGroups = function renderFontLabDevGroups() {
     buildFontGroup();
+    buildTextGroup();
     buildLayersGroup();
     buildPathGroup();
     buildTweenGroup();
@@ -833,13 +886,21 @@ function markActiveTestChar(ch) {
 }
 
 function rerun() {
-    const char = (state.char || '').trim();
-    markActiveTestChar(char);
+    const text = state.text || '';
+    markActiveTestChar(text);
     if (!state.font) { setStatus('Load a font file first.', 'warn'); return; }
-    if (!char) { setStatus('Enter a character.', 'warn'); return; }
-    if (!hasGlyphFor(state.font, char[0])) {
-        setStatus(`This font has no glyph for "${char[0]}".`, 'error');
-        state.result = { ok: false, stage: 'glyph lookup', error: `No glyph for "${char[0]}" in this font.` };
+    if (!text.trim()) { setStatus('Enter some text.', 'warn'); return; }
+
+    // Report missing glyphs up front rather than letting them silently
+    // render as blanks. Only a string with NO renderable glyph at all is
+    // a hard failure -- a space, or one unsupported character among
+    // several, is not.
+    const chars = Array.from(text);
+    const missing = chars.filter((c) => c.trim() && !hasGlyphFor(state.font, c));
+    if (missing.length === chars.filter((c) => c.trim()).length) {
+        const msg = `This font has no glyph for ${missing.map((c) => `"${c}"`).join(', ')}.`;
+        setStatus(msg, 'error');
+        state.result = { ok: false, stage: 'glyph lookup', error: msg };
         renderer.setResult(state.result);
         renderer.draw();
         if (ui.report) ui.report.innerHTML = '';
@@ -848,7 +909,7 @@ function rerun() {
     }
 
     const t0 = performance.now();
-    const result = runPipeline(state.font, char[0], state.config);
+    const result = runPipeline(state.font, text, state.config);
     const wall = performance.now() - t0;
     state.result = result;
     state.debug = toDebugJSON(result);
@@ -865,11 +926,14 @@ function rerun() {
         recomputeTween();
         const warnCount = result.warnings.length;
         setStatus(
-            `${char[0]} — ${result.vector.segments.length} segments, `
+            `${text} — ${result.vector.segments.length} segments, `
             + `${result.graph.stats.componentCount} component(s), ${wall.toFixed(0)}ms`
             + (warnCount ? `  (${warnCount} warning${warnCount > 1 ? 's' : ''})` : ''),
-            warnCount ? 'warn' : 'ok',
+            warnCount || missing.length ? 'warn' : 'ok',
         );
+        if (missing.length) {
+            setStatus(`${text} — rendered without ${missing.map((c) => `"${c}"`).join(', ')} (no glyph in this font)`, 'warn');
+        }
     } else {
         animator.pause();
         animator.setRoute(null);
@@ -893,7 +957,7 @@ function renderReport(result) {
     }
     const r = result;
     const rows = [
-        ['glyph', `#${r.glyph.glyphIndex} ${r.glyph.glyphName || ''} · ${r.glyph.contourCount} contour(s)`],
+        ['text', `"${r.glyph.text}" · ${r.glyph.glyphCount} glyph(s) · ${r.glyph.contourCount} contour(s)`],
         ['raster', `${r.raster.width}x${r.raster.height} px · ${r.raster.filledPixels} filled (${(r.raster.fillRatio * 100).toFixed(1)}%)`],
         ['thinning', `${r.thin.algorithm} · ${r.thin.iterations} iters · ${r.thin.converged ? 'converged' : 'CAPPED'} · ${r.thin.skeletonPixels} px`],
         ['graph raw', `${r.graphBeforeCleanup.nodeCount} nodes, ${r.graphBeforeCleanup.edgeCount} edges, ${r.graphBeforeCleanup.componentCount} comp`],
