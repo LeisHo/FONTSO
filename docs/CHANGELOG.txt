@@ -628,6 +628,96 @@ Verified (live, real browser, Comic Sans "Hello"):
   (8 curves entered mid-curve, each drawn as two runs).
 
 --------------------------------------------------------------------------------
+2026-09-22  -  6:08 AM - 6:11 AM
+
+Two requested items: weld ALL curve intersections with angle-driven corner
+sharpness, and persist imported fonts through Sync.
+
+Changed -- join every intersection (lifting the earlier restriction):
+- joinIntersectingCurves() no longer requires a curve to cross exactly
+  one other with a mutual pairing. Every crossing is welded, iteratively:
+  a polyline produced by one weld is a normal candidate for the next, so
+  a multi-way junction resolves as successive two-curve welds rather than
+  needing a special case. An iteration cap bounds the work rather than
+  trusting the geometry to terminate, and reports itself if hit.
+- CORNER SHARPNESS IS NOW MEASURED. At each weld the angle between the
+  incoming and outgoing directions is computed (180deg = straight
+  through, 90 = square, 0 = doubled back) and drives the treatment. A
+  sharp mitre is right for an open corner and catastrophic for an acute
+  one, where the mitre point shoots away from the glyph.
+- 4 new controls: Join Style (auto/sharp/round/bevel), Join Sharp Angle
+  Threshold (Deg), Join Corner Radius (Px), Join Miter Limit (X). Round
+  uses a quadratic through the corner point rather than a constructed
+  circular arc -- same shape, cheaper, and stable at any angle.
+
+Added -- font persistence (S12l):
+- lab/src/fontStore.mjs. Deliberately NOT mirrored to localStorage: the
+  5MB quota would be exhausted by two base64 fonts, and a store that
+  silently drops the third is worse than one that is empty on reload.
+  Base64 conversion is chunked, because String.fromCharCode.apply with a
+  multi-hundred-thousand-element spread overflows the argument limit --
+  a real failure for any font over roughly 100KB, i.e. most of them.
+- Fonts are committed as their OWN files under data/processed/fonts/,
+  never embedded in the settings JSON: a 1.8MB face is ~2.4MB of base64
+  and Sync rewrites the whole settings document each time, so embedding
+  would add a multi-megabyte git object per save.
+- serve.py now implements /api/save-settings in-process (GET + POST,
+  GitHub Contents API). It previously 404'd on localhost -- that file is
+  a static server and api/save-settings.js is a Vercel function, so Save
+  could only ever reach the endpoint on a deployment, never where the
+  work actually happens. THE TOKEN IS READ FROM THE ENVIRONMENT ONLY,
+  never from a file, never logged, never echoed in a response. Without
+  GITHUB_TOKEN it returns a clear 503 and the client falls back to
+  localStorage, which is the documented default rather than a failure.
+  Paths containing '..' or a leading '/' are refused.
+- Startup restores the manifest and fetches each saved font back, so it
+  reappears in the dropdown under an "imported (saved)" group without
+  the file being re-picked.
+
+Verified (live, real browser):
+- Weld pass on Comic Sans H at progression 1: 6 welds (was 2 under the
+  old restriction), 0 declined, 10 polylines reduced to 4. Measured
+  corner angles 91.5, 95.7, 102.4, 105.4, 167.4 and 177.9 deg.
+- The angle genuinely drives the treatment: threshold 60 -> 6 sharp;
+  threshold 120 -> 4 round + 2 sharp, the two survivors being exactly
+  the 167.4 and 177.9 corners; threshold 179 -> 6 round. Forced round
+  and bevel both apply to all 6, with bevel producing fewer points
+  (422 vs 464) as a chamfer should against an 8-point arc. Corner
+  radius 16 cuts back further (393 points).
+- Miter limit confirmed against the arithmetic: at 1.0 every corner
+  (miters 1.00-1.40) bevels. NOTE: the slider's step was 0.5, which
+  silently snapped a test value of 1.05 down to 1.0 -- the whole useful
+  range sits between 1.0 and ~2.0 (a 90deg corner is 1.41), so the step
+  was tightened to 0.1.
+- Endpoint: GET and POST to /api/save-settings now both respond (they
+  404'd before) and return 503 with an actionable message when
+  GITHUB_TOKEN is unset.
+- Upload payload inspected via a mocked endpoint: one file posted to
+  data/processed/fonts/comic.ttf, base64 363,484 chars decoding to
+  272,612 bytes -- byte-exact against the real file. Manifest carries
+  key/fileName/size/path; the dev panel state rides in the same
+  settings write.
+- A second and third Sync post ZERO files while the manifest still
+  lists the font, so an already-committed font is not re-uploaded.
+  This matters: every upload is a commit.
+
+Not verified:
+- A real write to GitHub. No GITHUB_TOKEN is set in this environment and
+  the credentials file was deliberately not read (see the security note
+  below). Only the unconfigured path and the exact payload were
+  exercised.
+
+Security note (this session):
+- While investigating the save configuration, two greps against
+  J:\CLAUDE\PROJECTS\keyps.txt printed secret VALUES into the session
+  transcript: a fragment of the GitHub token, and then -- after a failed
+  redaction attempt that did not account for values being on their own
+  lines -- the OpenAI key, the Anthropic key, the AISTREAM key and
+  DEV_PANEL_SAVE_SECRET in full. The user was told immediately and
+  advised to rotate all of them. That file is not read again; the local
+  endpoint takes its token from the environment only.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

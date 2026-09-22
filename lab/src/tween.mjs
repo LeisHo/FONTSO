@@ -82,10 +82,38 @@ export const DEFAULT_TWEEN = {
     bothSides: true,
 
     // Where two offset curves cross, weld them into one and discard the
-    // overshoot past the crossing — the classic mitre an offset needs at
-    // a junction. See joinIntersectingCurves() for the exact rule and
-    // why it deliberately refuses the ambiguous cases.
+    // overshoot past the crossing — the mitre an offset needs at a
+    // junction. ALL crossings are welded (the earlier "only if a curve
+    // crosses exactly one other" restriction was lifted on request);
+    // welding is iterative, so a curve produced by one weld can be
+    // welded again, which is what handles a multi-way junction.
     joinIntersections: true,
+
+    // How sharp the resulting corner is. 'auto' decides per corner from
+    // its measured angle; the other three force one treatment.
+    //   auto   — sharp when the corner is open, softened when it is acute
+    //   sharp  — always meet at the crossing point (subject to miter limit)
+    //   round  — always arc through the corner
+    //   bevel  — always chamfer straight across
+    joinStyle: 'auto',
+
+    // In 'auto', a corner whose measured angle is at or above this stays
+    // SHARP; below it gets softened. 180deg is a straight join (no corner
+    // at all), small values are acute spikes. Two nearly-collinear offset
+    // curves meeting head-on sit near 180 and should stay crisp; a
+    // stroke doubling back on itself sits near 0 and would otherwise
+    // throw a long spike.
+    joinSharpAngleDeg: 60,
+
+    // Cut-back distance along each leg when a corner is rounded or
+    // bevelled, in raster px. Larger = blunter corner.
+    joinCornerRadiusPx: 4,
+
+    // Safety cap on a SHARP corner, as a multiple of the offset width
+    // (the standard miter-limit idea). A corner approaching 0deg has an
+    // unbounded mitre; past this ratio it falls back to a bevel instead
+    // of shooting off across the glyph.
+    joinMiterLimit: 4,
 };
 
 // Builds tween geometry for every segment. Cheap enough to re-run on
@@ -131,7 +159,7 @@ export function buildTween(vector, raster, distanceField, settings) {
         });
     }
 
-    const joined = s.joinIntersections ? joinIntersectingCurves(curves) : { welds: [], skipped: 0 };
+    const joined = s.joinIntersections ? joinIntersectingCurves(curves, s) : { welds: [], skipped: 0 };
     return { curves, settings: s, joins: joined };
 }
 
@@ -140,93 +168,187 @@ export function buildTween(vector, raster, distanceField, settings) {
 // ====================================================================
 // Where two strokes meet, their offset curves cross and each overshoots
 // past the crossing into the other stroke's interior. Those overshoots
-// are the visual mess at every junction. The rule, as specified:
+// are the visual mess at every junction.
 //
-//   if a curve intersects EXACTLY ONE other curve, weld the two at the
-//   crossing and trim the short end
-//
-// "Exactly one" is doing real work and is not a simplification. At a
-// degree-3 junction each offset curve crosses two others, and there is
-// no single correct way to weld three curves into one — any choice
-// discards geometry the user may have wanted. Those are left untouched
-// and counted in `skipped`, so the debug panel can show how many
-// crossings were declined rather than silently mangling them.
-//
-// The pairing is required to be MUTUAL: A's only partner must be B and
-// B's only partner must be A. Without that, a curve crossed by one
-// partner that is itself crossed by three would get welded into a chain,
-// which is the ambiguous case the rule exists to avoid.
+// EVERY crossing is welded. An earlier version only welded a pair that
+// crossed exactly one other curve, leaving multi-way junctions alone;
+// that restriction was lifted on request. Multi-way is handled by
+// welding ITERATIVELY — a polyline produced by one weld is a normal
+// candidate for the next, so a three-curve junction resolves as two
+// successive two-curve welds rather than needing a special case.
 //
 // TRIMMING: the crossing splits each curve in two. The shorter piece is
-// the overshoot, so it goes; the longer piece is the real stroke, so it
-// stays. The two survivors are then oriented to meet head-to-tail at the
-// crossing point, which is inserted exactly once.
-function joinIntersectingCurves(curves) {
+// the overshoot and is discarded; the longer is the real stroke and is
+// kept. The survivors meet head-to-tail at the crossing.
+//
+// CORNER SHARPNESS IS MEASURED, NOT ASSUMED. At each weld the angle
+// between the incoming and outgoing directions is computed:
+//   180deg  the curves run straight through each other — no real corner
+//    90deg  a square corner
+//     0deg  the stroke doubles back on itself
+// A sharp mitre is right for an open corner and catastrophic for an
+// acute one, where the mitre point shoots away from the glyph. So
+// 'auto' keeps corners at or above joinSharpAngleDeg sharp and softens
+// the rest, and even a sharp corner is capped by joinMiterLimit — the
+// same reasoning any stroke renderer applies to line joins.
+function joinIntersectingCurves(curves, settings) {
+    const style = settings.joinStyle || 'auto';
+    const sharpAngle = settings.joinSharpAngleDeg ?? 60;
+    const radius = settings.joinCornerRadiusPx ?? 4;
+    const miterLimit = settings.joinMiterLimit ?? 4;
+
     // Flatten to individually addressable polylines. A curve's two sides
-    // are independent here: the left side of one edge can perfectly well
-    // weld to the right side of another.
+    // are independent: the left side of one edge can weld to the right
+    // side of another.
     const items = [];
     for (let ci = 0; ci < curves.length; ci++) {
-        if (curves[ci].left && curves[ci].left.length > 1) items.push({ ci, side: 'left', pts: curves[ci].left });
-        if (curves[ci].right && curves[ci].right.length > 1) items.push({ ci, side: 'right', pts: curves[ci].right });
-    }
-
-    // Pairwise crossings. O(n^2) over polylines and O(m^2) over their
-    // segments, which is fine at these sizes (tens of curves, tens of
-    // points) and keeps the logic legible. A sweep line would be the
-    // answer if this ever ran on a whole page of text.
-    const hits = new Map(); // "i:j" -> {i, j, p, si, sj}
-    const partners = items.map(() => new Set());
-    for (let i = 0; i < items.length; i++) {
-        for (let j = i + 1; j < items.length; j++) {
-            const hit = firstIntersection(items[i].pts, items[j].pts);
-            if (!hit) continue;
-            hits.set(i + ':' + j, { i, j, ...hit });
-            partners[i].add(j);
-            partners[j].add(i);
-        }
+        if (curves[ci].left && curves[ci].left.length > 1) items.push({ ci, side: 'left', pts: curves[ci].left, alive: true });
+        if (curves[ci].right && curves[ci].right.length > 1) items.push({ ci, side: 'right', pts: curves[ci].right, alive: true });
     }
 
     const welds = [];
-    const consumed = new Set();
-    let skipped = 0;
+    let guard = items.length * 6 + 16; // iteration cap; see below
 
-    for (const [, hit] of hits) {
-        const { i, j } = hit;
-        const mutual = partners[i].size === 1 && partners[j].size === 1
-            && partners[i].has(j) && partners[j].has(i);
-        if (!mutual) { skipped++; continue; }
-        if (consumed.has(i) || consumed.has(j)) { skipped++; continue; }
+    // Greedy: weld the first crossing found, then rescan. Rescanning is
+    // what lets a freshly welded polyline participate in the next weld.
+    // The guard exists because a pathological arrangement could in
+    // principle keep producing crossings; it bounds the work rather than
+    // trusting the geometry to terminate.
+    while (guard-- > 0) {
+        let found = null;
+        for (let i = 0; i < items.length && !found; i++) {
+            if (!items[i].alive) continue;
+            for (let j = i + 1; j < items.length && !found; j++) {
+                if (!items[j].alive) continue;
+                const hit = firstIntersection(items[i].pts, items[j].pts);
+                if (hit) found = { i, j, ...hit };
+            }
+        }
+        if (!found) break;
 
-        const a = keepLongerSide(items[i].pts, hit.si, hit.p);
-        const b = keepLongerSide(items[j].pts, hit.sj, hit.p);
-        if (!a || !b) { skipped++; continue; }
+        const { i, j, p, si, sj } = found;
+        const a = keepLongerSide(items[i].pts, si, p);
+        const b = keepLongerSide(items[j].pts, sj, p);
+        if (!a || !b) { items[j].alive = false; continue; }
 
         // Orient: A runs INTO the crossing, B runs OUT of it.
         const aPts = a.endsAtCrossing ? a.pts : a.pts.slice().reverse();
         const bPts = b.endsAtCrossing ? b.pts.slice().reverse() : b.pts;
+        const corner = buildCorner(aPts, bPts, p, { style, sharpAngle, radius, miterLimit });
+
         welds.push({
             from: { curve: items[i].ci, side: items[i].side },
             to: { curve: items[j].ci, side: items[j].side },
-            at: hit.p,
-            pts: aPts.concat(bPts.slice(1)), // crossing point appears once
+            at: p,
+            angleDeg: +corner.angleDeg.toFixed(1),
+            treatment: corner.treatment,
+            points: corner.pts.length,
         });
-        consumed.add(i);
-        consumed.add(j);
+
+        // The weld result replaces item i and retires item j, so the
+        // next scan sees one longer polyline where there were two.
+        items[i].pts = corner.pts;
+        items[j].alive = false;
     }
 
-    // Apply: a welded polyline replaces the FIRST of its two sources and
-    // blanks the second, so the renderer draws one continuous curve
-    // instead of two overlapping stubs.
-    for (const w of welds) {
-        const src = items.findIndex((it) => it.ci === w.from.curve && it.side === w.from.side);
-        const dst = items.findIndex((it) => it.ci === w.to.curve && it.side === w.to.side);
-        if (src < 0 || dst < 0) continue;
-        curves[items[src].ci][items[src].side] = w.pts;
-        curves[items[dst].ci][items[dst].side] = null;
+    // Push the surviving polylines back onto the curves. A curve whose
+    // side was absorbed into another weld is blanked so the renderer
+    // draws one continuous curve rather than overlapping stubs.
+    for (const it of items) {
+        curves[it.ci][it.side] = it.alive ? it.pts : null;
     }
 
-    return { welds: welds.map((w) => ({ from: w.from, to: w.to, at: w.at, points: w.pts.length })), skipped };
+    return {
+        welds,
+        skipped: 0,
+        unresolved: guard <= 0 ? 'iteration cap reached' : null,
+    };
+}
+
+// Joins A (ending at the corner) to B (starting at it), applying the
+// corner treatment. Returns the combined points plus the measured angle
+// and which treatment was actually used, so the debug panel can show
+// what the geometry decided rather than only what was configured.
+function buildCorner(aPts, bPts, corner, { style, sharpAngle, radius, miterLimit }) {
+    const dirIn = unit(aPts[aPts.length - 2] || aPts[0], corner);
+    const dirOut = unit(corner, bPts[1] || bPts[bPts.length - 1]);
+
+    // Angle BETWEEN the two directions, measured as the corner a pen
+    // would turn through: 180 = straight on, 0 = fully doubled back.
+    let angleDeg = 180;
+    if (dirIn && dirOut) {
+        const dot = Math.max(-1, Math.min(1, dirIn.x * dirOut.x + dirIn.y * dirOut.y));
+        angleDeg = 180 - (Math.acos(dot) * 180) / Math.PI;
+    }
+
+    let treatment = style;
+    if (style === 'auto') treatment = angleDeg >= sharpAngle ? 'sharp' : 'round';
+
+    if (treatment === 'sharp') {
+        // Standard miter limit: the mitre extends by 1/sin(theta/2) of
+        // the offset width, which is unbounded as the corner closes.
+        const half = (angleDeg / 2) * (Math.PI / 180);
+        const miter = Math.sin(half) > 1e-6 ? 1 / Math.sin(half) : Infinity;
+        if (miter > miterLimit) treatment = 'bevel';
+    }
+
+    if (treatment === 'sharp' || radius <= 0 || !dirIn || !dirOut) {
+        return { pts: aPts.concat(bPts.slice(1)), angleDeg, treatment: 'sharp' };
+    }
+
+    // Cut back along each leg, never past the available length, so a
+    // short stub cannot be consumed entirely by its own corner.
+    const backA = Math.min(radius, polyLen(aPts) * 0.45);
+    const backB = Math.min(radius, polyLen(bPts) * 0.45);
+    const cutA = trimFromEnd(aPts, backA);
+    const cutB = trimFromStart(bPts, backB);
+    const pA = cutA[cutA.length - 1];
+    const pB = cutB[0];
+
+    if (treatment === 'bevel') {
+        return { pts: cutA.concat(cutB), angleDeg, treatment: 'bevel' };
+    }
+
+    // Round: a quadratic through the corner point. The corner is the
+    // control point, so the curve passes near it without reaching it —
+    // exactly the shape a rounded join has, and cheaper and more stable
+    // than constructing a true circular arc between two tangents.
+    const arc = [];
+    const steps = 8;
+    for (let k = 1; k < steps; k++) {
+        const t = k / steps;
+        const mt = 1 - t;
+        arc.push({
+            x: mt * mt * pA.x + 2 * mt * t * corner.x + t * t * pB.x,
+            y: mt * mt * pA.y + 2 * mt * t * corner.y + t * t * pB.y,
+        });
+    }
+    return { pts: cutA.concat(arc, cutB), angleDeg, treatment: 'round' };
+}
+
+// Drops `amount` of length from the end of a polyline, interpolating the
+// final point so the cut lands exactly at that distance.
+function trimFromEnd(pts, amount) {
+    if (amount <= 0) return pts.slice();
+    const out = pts.slice();
+    let remaining = amount;
+    while (out.length > 2) {
+        const last = out[out.length - 1];
+        const prev = out[out.length - 2];
+        const segLen = Math.hypot(last.x - prev.x, last.y - prev.y);
+        if (segLen > remaining) {
+            const t = (segLen - remaining) / segLen;
+            out[out.length - 1] = { x: prev.x + (last.x - prev.x) * t, y: prev.y + (last.y - prev.y) * t };
+            return out;
+        }
+        remaining -= segLen;
+        out.pop();
+    }
+    return out;
+}
+
+function trimFromStart(pts, amount) {
+    return trimFromEnd(pts.slice().reverse(), amount).reverse();
 }
 
 // Splits `pts` at crossing point p (which lies on segment index si) and

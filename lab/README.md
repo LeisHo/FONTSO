@@ -190,15 +190,32 @@ The tween is **render-only**: the distance transform is computed once per
 pipeline run (5.2ms) and cached, so dragging any tween control re-offsets
 the existing polylines and redraws. It never re-rasterises or re-thins.
 
-**Join Intersecting Curves** welds two offset curves that cross, trimming
-the overshoot past the crossing — the mitre an offset needs at a junction.
-It fires only when a curve crosses **exactly one** other curve, and the
-pairing must be mutual. At a degree-3 junction each curve crosses two
-others and there is no single correct weld, so those are declined and
-counted (the count is in the debug JSON) rather than silently mangled.
-Measured on Comic Sans `H` at progression 1: 2 welds at the stem/crossbar
-junctions, 4 crossings declined, 10 polylines reduced to 8. At low
-progression there are no crossings yet and nothing is welded.
+**Join Intersecting Curves** welds offset curves that cross, trimming
+the overshoot past the crossing. **Every** crossing is welded; welding is
+iterative, so a polyline produced by one weld is a candidate for the
+next, which is how multi-way junctions resolve without a special case.
+Measured on Comic Sans `H` at progression 1: **6 welds, 0 declined, 10
+polylines reduced to 4**. At low progression nothing has crossed yet and
+nothing is welded.
+
+**Corner sharpness is measured, not assumed.** At each weld the angle
+between the incoming and outgoing directions is computed — 180° means
+the curves run straight through each other, 90° a square corner, 0° a
+stroke doubling back. A sharp mitre is right for an open corner and
+catastrophic for an acute one, where the mitre point shoots away from
+the glyph.
+
+| Control | Does |
+|---|---|
+| *Join Style* | `auto` decides per corner from its angle; `sharp`/`round`/`bevel` force one |
+| *Join Sharp Angle Threshold (Deg)* | in `auto`, at or above this stays sharp; below is softened |
+| *Join Corner Radius (Px)* | cut-back along each leg when rounding or bevelling |
+| *Join Miter Limit (X)* | caps a sharp corner; past it, falls back to bevel |
+
+On Comic Sans `H` the six corners measure 91.5°, 95.7°, 102.4°, 105.4°,
+167.4° and 177.9°. At threshold 60 all stay sharp; at 120 the four
+square-ish ones round while the two near-straight ones stay sharp — the
+threshold does exactly what the measured angles predict.
 
 **Nearest-Curve Routing** (Traversal group, on by default) decides which
 piece to draw next by proximity to the pen rather than by a fixed
@@ -218,6 +235,38 @@ on `Hello` while the curve count stays at 19.
 **Animation Path** (in the Animation group) switches the dot between the
 midline and the tween geometry. On Comic Sans `H` that is a 625.6px route
 versus 1721px, since the tween has two curves per segment.
+
+## Saving imported fonts (CLAUDE.md §12l)
+
+Sync writes the dev panel's state to the git-tracked settings file **and
+commits every imported font that is not already there**, so a font comes
+back after a reload or on another machine. Fonts are committed as their
+own files under `data/processed/fonts/`, never embedded in the settings
+JSON: a 1.8MB face is ~2.4MB of base64, and Sync rewrites the whole
+settings document each time, so embedding would mean a fresh
+multi-megabyte git object per save.
+
+A second Sync uploads nothing — fonts already committed are skipped,
+which matters because each upload is a commit.
+
+`serve.py` now implements `/api/save-settings` itself. It previously
+404'd on localhost, because that file is a static server and
+`api/save-settings.js` is a Vercel function — so Save could only ever
+reach the endpoint on a deployment, not where the work happens.
+
+**The token is read from the environment only** — never from a file,
+never logged, never echoed in a response:
+
+```bash
+GITHUB_TOKEN=... GITHUB_REPO=owner/repo python scripts/active/serve.py 8420
+```
+
+Without it the endpoint returns a clear 503 and the browser falls back
+to localStorage, which is the documented default rather than a failure.
+
+**Licensing:** imported faces are often OS fonts that are not
+redistributable. The repo is private, so this is a personal backup —
+prune `data/processed/fonts/` before making it public.
 
 ## Known limitations
 

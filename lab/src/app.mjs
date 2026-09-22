@@ -19,12 +19,16 @@
 // generically. Ids that don't follow it silently lose that feature.
 // ====================================================================
 
-import { loadFontFromFile, loadFontFromUrl, hasGlyphFor } from './fontLoader.mjs';
+import { loadFontFromFile, loadFontFromUrl, loadFontFromArrayBuffer, hasGlyphFor } from './fontLoader.mjs';
 import { DEFAULT_CONFIG, CONFIG_META } from './config.mjs';
 import { runPipeline, toDebugJSON } from './pipeline.mjs';
 import { Renderer, DEFAULT_LAYERS, DEFAULT_VIEW, LAYER_COLORS } from './viz/renderer.mjs';
 import { PathAnimator } from './viz/animator.mjs';
 import { DEFAULT_TWEEN, buildTween, tweenAnimationRoute } from './tween.mjs';
+import {
+    rememberFont, getFont, listFonts, unsavedFonts, markSaved,
+    bytesToBase64, base64ToBytes, adoptSavedFont, keyForFileName,
+} from './fontStore.mjs';
 
 // The brief's own test set. Chosen to cover the structural cases that
 // break naive skeletonisers: a junction-free ring (O), a pure-curve
@@ -65,6 +69,7 @@ const ui = {
     scrub: null,
     charInput: null,
     textInput: null,
+    localFontSelect: null,
     charButtons: [],
 };
 
@@ -199,7 +204,8 @@ function buildFontGroup() {
     localSelect.appendChild(placeholder);
     localSelect.addEventListener('change', onLocalFontChosen);
     customRow(content, (row) => row.appendChild(localSelect));
-    populateLocalFonts(localSelect, placeholder);
+    ui.localFontSelect = localSelect;
+    populateLocalFonts(localSelect, placeholder).then(() => restoreSavedFonts(localSelect));
 
     customRow(content, (row) => {
         const label = document.createElement('span');
@@ -396,7 +402,8 @@ function setupDelegatedConfigWiring() {
         // redraw. Like the view settings, never a pipeline re-run.
         const tweenKey = TWEEN_BY_CONTROL_ID[resolved.desktopId];
         if (tweenKey) {
-            state.tween[tweenKey] = el.type === 'checkbox' ? el.checked : parseFloat(el.value);
+            state.tween[tweenKey] = el.type === 'checkbox' ? el.checked
+                : (el.tagName === 'SELECT' ? el.value : parseFloat(el.value));
             recomputeTween();
             renderer.draw();
             return;
@@ -586,6 +593,31 @@ function buildTweenGroup() {
             id: 'checkboxTweenJoinIntersections', type: 'checkbox',
             label: 'Join Intersecting Curves On/Off', value: state.tween.joinIntersections,
         }),
+        addRow(GROUPS.TWEEN, {
+            id: 'selectTweenJoinStyle', type: 'select', label: 'Join Style',
+            options: [
+                { value: 'auto', text: 'auto (by measured angle)' },
+                { value: 'sharp', text: 'sharp' },
+                { value: 'round', text: 'round' },
+                { value: 'bevel', text: 'bevel' },
+            ],
+            value: state.tween.joinStyle,
+        }),
+        addRow(GROUPS.TWEEN, {
+            id: 'sliderTweenJoinSharpAngle', type: 'slider', label: 'Join Sharp Angle Threshold (Deg)',
+            min: 0, max: 180, step: 1, value: state.tween.joinSharpAngleDeg,
+        }),
+        addRow(GROUPS.TWEEN, {
+            id: 'sliderTweenJoinCornerRadius', type: 'slider', label: 'Join Corner Radius (Px)',
+            min: 0, max: 30, step: 0.5, value: state.tween.joinCornerRadiusPx,
+        }),
+        addRow(GROUPS.TWEEN, {
+            id: 'sliderTweenJoinMiterLimit', type: 'slider', label: 'Join Miter Limit (X)',
+            // step 0.1, not 0.5: the whole interesting range sits between
+            // 1.0 and ~2.0 (a 90deg corner has a miter of 1.41), so a
+            // coarser step would skip straight past it.
+            min: 1, max: 20, step: 0.1, value: state.tween.joinMiterLimit,
+        }),
     ];
     window.renderControlArray(controls, 'buildTweenGroup');
 }
@@ -602,6 +634,10 @@ const TWEEN_BY_CONTROL_ID = {
     sliderTweenExtendTerminals: 'extendTerminalsPx',
     checkboxTweenBothSides: 'bothSides',
     checkboxTweenJoinIntersections: 'joinIntersections',
+    selectTweenJoinStyle: 'joinStyle',
+    sliderTweenJoinSharpAngle: 'joinSharpAngleDeg',
+    sliderTweenJoinCornerRadius: 'joinCornerRadiusPx',
+    sliderTweenJoinMiterLimit: 'joinMiterLimit',
 };
 
 // Re-offsets the existing centrelines against the cached distance field.
@@ -777,12 +813,156 @@ window.renderFontLabDevGroups = function renderFontLabDevGroups() {
         || `unwired control id: ${ctrl.id}`
     ));
 
+    // Sync: the template's own saveDevPanelSettings() already wrote to
+    // localStorage by the time this runs, so a failed remote save can
+    // never cost a local one. Extra listeners on the EXISTING buttons,
+    // so devpanel.js stays a verbatim copy.
+    const syncButtons = [
+        document.getElementById('devHeaderSyncBtn'),
+        ...Array.from(document.querySelectorAll('.dev-buttons button'))
+            .filter((b) => (b.getAttribute('onclick') || '').includes('saveDevPanelSettings')),
+    ].filter(Boolean);
+    syncButtons.forEach((btn) => btn.addEventListener('click', () => { syncToRemote(); }));
+
     buildLegend();
     renderer.setViewSettings(state.view);
     renderer.resizeToDisplaySize();
     renderer.draw();
     setStatus('Load a .ttf / .otf to begin.');
 };
+
+
+// ====================================================================
+// Persistence (CLAUDE.md §12l) -- settings AND imported fonts
+// ====================================================================
+// Sync writes the dev panel's state to the git-tracked settings file
+// AND commits every imported font that is not already there, so the
+// fonts come back on another machine or after a reload.
+//
+// Fonts are committed as their OWN files under data/processed/fonts/,
+// never embedded in the settings JSON -- see fontStore.mjs for the
+// reasoning (a 1.8MB face is ~2.4MB of base64, and Sync rewrites the
+// whole settings document every time).
+//
+// Everything here degrades to localStorage silently when the endpoint
+// is absent, which is the normal case on a plain static server and the
+// documented default rather than a failure.
+const SETTINGS_ENDPOINT = '/api/save-settings';
+const FONT_DIR = 'data/processed/fonts/';
+
+// Client half of §12l's shared secret. Empty means "no remote writes
+// from this build"; the local server only enforces it when it has one
+// set in its own environment.
+const DEV_PANEL_SAVE_SECRET = '';
+
+async function remoteGetSettings() {
+    try {
+        const resp = await fetch(SETTINGS_ENDPOINT, { cache: 'no-store' });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        return data && data.ok ? data.settings : null;
+    } catch {
+        return null; // no endpoint behind this page
+    }
+}
+
+// GET -> merge -> POST, never a blind POST: the settings document holds
+// several independent top-level keys written by different code paths,
+// and a blind overwrite from any one of them erases the others.
+async function remoteSave({ patch = {}, files = [] } = {}) {
+    try {
+        const current = (await remoteGetSettings()) || {};
+        const headers = { 'Content-Type': 'application/json' };
+        if (DEV_PANEL_SAVE_SECRET) headers['x-dev-panel-secret'] = DEV_PANEL_SAVE_SECRET;
+        const resp = await fetch(SETTINGS_ENDPOINT, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ settings: { ...current, ...patch }, files }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        return { ok: resp.ok && data.ok !== false, error: data.error, written: data.written || [] };
+    } catch (e) {
+        return { ok: false, error: String((e && e.message) || e), written: [] };
+    }
+}
+
+// Called on every Sync. Uploads any font not yet committed, then writes
+// the settings document including the font manifest.
+async function syncToRemote() {
+    const pending = unsavedFonts();
+    const files = pending.map((f) => ({
+        path: FONT_DIR + f.fileName,
+        contentBase64: bytesToBase64(f.bytes),
+        message: `Add imported font ${f.fileName} via Font Path Laboratory`,
+    }));
+
+    const manifest = listFonts().map((f) => ({
+        key: f.key,
+        fileName: f.fileName,
+        size: f.size,
+        path: f.savedPath || (FONT_DIR + f.fileName),
+    }));
+
+    const patch = { importedFonts: manifest };
+    if (typeof window.captureFullDevPanelState === 'function') {
+        patch.devPanel = window.captureFullDevPanelState();
+    }
+
+    setStatus(pending.length ? `Saving ${pending.length} font(s) + settings…` : 'Saving settings…');
+    const res = await remoteSave({ patch, files });
+    if (!res.ok) {
+        // Not an error the user needs to act on: localStorage already
+        // holds the panel state, so nothing was lost.
+        setStatus(`Saved locally only — remote save unavailable (${res.error || 'no endpoint'}).`, 'warn');
+        return;
+    }
+    for (const f of pending) markSaved(f.key, FONT_DIR + f.fileName);
+    setStatus(`Saved ${res.written.length} file(s) to the repo: ${res.written.join(', ')}`, 'ok');
+    refreshFontList();
+}
+
+// On startup, pull the manifest and fetch each saved font back so it is
+// selectable again without re-picking the file.
+async function restoreSavedFonts(select) {
+    const settings = await remoteGetSettings();
+    const manifest = (settings && settings.importedFonts) || [];
+    if (!manifest.length) return;
+    for (const entry of manifest) {
+        try {
+            const resp = await fetch('/' + entry.path, { cache: 'no-store' });
+            if (!resp.ok) continue;
+            const bytes = new Uint8Array(await resp.arrayBuffer());
+            adoptSavedFont(entry.key, entry.fileName, bytes, entry.path);
+        } catch {
+            // A font listed in the manifest but missing from the repo is
+            // skipped rather than failing the whole restore.
+        }
+    }
+    refreshFontList(select);
+}
+
+// Adds every stored font to the font dropdown under a "saved" group, so
+// imported fonts sit alongside the local test faces.
+function refreshFontList(select) {
+    const sel = select || ui.localFontSelect;
+    if (!sel) return;
+    let group = sel.querySelector('optgroup[data-saved]');
+    const fonts = listFonts();
+    if (!fonts.length) { if (group) group.remove(); return; }
+    if (!group) {
+        group = document.createElement('optgroup');
+        group.label = 'imported (saved)';
+        group.setAttribute('data-saved', '1');
+        sel.appendChild(group);
+    }
+    group.innerHTML = '';
+    for (const f of fonts) {
+        const opt = document.createElement('option');
+        opt.value = 'stored:' + f.key;
+        opt.textContent = `${f.fileName}${f.savedPath ? '' : ' (unsaved)'}`;
+        group.appendChild(opt);
+    }
+}
 
 // ---- Runtime ---------------------------------------------------------
 
@@ -825,8 +1005,11 @@ async function onFontFileChosen(e) {
     if (!file) return;
     setStatus('Parsing font…');
     try {
+        const buf = await file.arrayBuffer();
+        rememberFont(file.name, buf);
         const { font, info } = await loadFontFromFile(file);
         adoptFont(font, info);
+        refreshFontList();
     } catch (err) {
         state.font = null;
         if (ui.fontName) { ui.fontName.textContent = 'load failed'; ui.fontName.className = 'lab-status error'; }
@@ -837,10 +1020,32 @@ async function onFontFileChosen(e) {
 async function onLocalFontChosen(e) {
     const url = e.target.value;
     if (!url) return;
+
+    // A font restored from the repo is already in memory; parse from the
+    // stored bytes rather than re-fetching it.
+    if (url.startsWith('stored:')) {
+        const entry = getFont(url.slice(7));
+        if (!entry) { setStatus('That saved font is no longer in memory.', 'warn'); return; }
+        try {
+            const { font, info } = loadFontFromArrayBuffer(entry.bytes.buffer, entry.fileName);
+            adoptFont(font, info);
+        } catch (err) {
+            setStatus(err.message || String(err), 'error');
+        }
+        return;
+    }
     setStatus('Loading ' + url + '…');
     try {
         const { font, info } = await loadFontFromUrl(url);
+        // Remembered too: from the app's point of view a face picked from
+        // the local list is just as "imported" as one picked from disk,
+        // and Sync should be able to persist whichever one is in use.
+        try {
+            const resp = await fetch(url, { cache: 'no-store' });
+            if (resp.ok) rememberFont(url.split('/').pop(), await resp.arrayBuffer());
+        } catch { /* the font already loaded; caching it is best-effort */ }
         adoptFont(font, info);
+        refreshFontList();
     } catch (err) {
         setStatus(err.message || String(err), 'error');
     }

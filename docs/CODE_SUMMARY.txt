@@ -43,6 +43,11 @@ THE LABORATORY (lab/) -- the live project.
   simplification, Chaikin smoothing.
 - `lab/src/vectorize.mjs` -- stage 6. Graph -> segments in raster px AND font
   units, with the transform relating them.
+- `lab/src/fontStore.mjs` -- in-memory registry of imported font bytes,
+  base64 transport, and the saved/unsaved bookkeeping Sync uses. NOT
+  mirrored to localStorage: the 5MB quota would be exhausted by two
+  base64 fonts, and a store that silently drops the third is worse than
+  one that is simply empty on reload. Persistence is the server's job.
 - `lab/src/routing.mjs` -- nearest-curve routing: given the pen's
   position and the curves not yet drawn, which to go to next and where
   to enter it. Shared by the midline traversal (component order + entry
@@ -125,6 +130,14 @@ UNTOUCHABLE SYSTEMS
 --------------------------------------------------------------------------------
 GOTCHAS
 
+- Fonts are committed as their OWN files under data/processed/fonts/,
+  never embedded in the settings JSON. A 1.8MB face is ~2.4MB of base64
+  and Sync rewrites the whole settings document every time, so embedding
+  would add a multi-megabyte git object per save.
+- serve.py implements /api/save-settings in-process. The token comes
+  from the GITHUB_TOKEN environment variable ONLY -- never from a file,
+  never logged, never echoed. Without it the endpoint returns 503 and
+  the client falls back to localStorage by design.
 - `python -m http.server` CANNOT serve this project -- it sends .mjs as
   text/plain and browsers reject that for ES modules. Use
   scripts/active/serve.py.
