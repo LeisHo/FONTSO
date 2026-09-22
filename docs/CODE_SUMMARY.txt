@@ -43,6 +43,10 @@ THE LABORATORY (lab/) -- the live project.
   simplification, Chaikin smoothing.
 - `lab/src/vectorize.mjs` -- stage 6. Graph -> segments in raster px AND font
   units, with the transform relating them.
+- `lab/src/routing.mjs` -- nearest-curve routing: given the pen's
+  position and the curves not yet drawn, which to go to next and where
+  to enter it. Shared by the midline traversal (component order + entry
+  node) and the tween animation route.
 - `lab/src/traversal.mjs` -- stage 7. Graph -> ordered route with explicit
   pen-up connectors.
 - `lab/src/distanceTransform.mjs` -- exact Euclidean distance transform

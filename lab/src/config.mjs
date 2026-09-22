@@ -144,6 +144,13 @@ export const DEFAULT_CONFIG = {
     // Emit explicit pen-up connector segments between the end of one
     // drawn segment and the start of the next. These are the hooks a
     // future traversal algorithm turns into real U-turns / travel moves.
+    // When moving between disconnected pieces, go to whichever is
+    // CLOSEST to the pen and enter it at its nearest point, instead of
+    // following a fixed reading order. Greedy nearest-neighbour: not a
+    // global optimum, but it removes the long pointless hops a fixed
+    // order produces. Off restores the deterministic reading order.
+    nearestRouting: true,
+
     emitConnectors: true,
 
     // Resample every emitted polyline to roughly this spacing (raster
@@ -173,6 +180,7 @@ export const CONFIG_META = {
     minSourceAreaPx: { label: 'Min source area', unit: 'px^2', min: 0, max: 200, step: 4, note: 'Measured on the MASK, not the skeleton - that is what separates a dot from a speck.' },
     useKerning: { label: 'Use Kerning', unit: 'bool', note: 'Off = raw advance widths, ignoring the kern table.' },
     letterSpacingUnits: { label: 'Letter Spacing', unit: 'font units', min: -400, max: 800, step: 10, note: 'Font units, so it scales with the em. Negative tightens.' },
+    nearestRouting: { label: 'Nearest-Curve Routing', unit: 'bool', note: 'Off = fixed reading order, which can hop across the whole glyph.' },
     emitConnectors: { label: 'Emit connectors', unit: 'bool', note: 'Pen-up moves between segments.' },
     traversalResampleSpacingPx: { label: 'Traversal resample spacing', unit: 'px', min: 0, max: 10, step: 0.5, note: '0 = uneven animation speed.' },
 };

@@ -48,7 +48,13 @@ export function buildTraversal(vector, config) {
     const nodeById = new Map(nodes.map((n) => [n.id, n]));
     const segById = new Map(segments.map((s) => [s.id, s]));
 
-    const ordered = [...components].sort((a, b) => {
+    // Component order. Reading order (left-to-right, then top-to-bottom)
+    // is deterministic but can send the pen back across the whole glyph;
+    // nearest-first picks whichever unvisited component is closest to
+    // where the pen actually is, which is what minimises travel. The
+    // first pick has no pen position yet, so it falls back to reading
+    // order and the run stays reproducible.
+    const readingOrder = [...components].sort((a, b) => {
         const ab = a.boundsPx;
         const bb = b.boundsPx;
         if (Math.abs(ab.minX - bb.minX) > 1) return ab.minX - bb.minX;
@@ -60,11 +66,28 @@ export function buildTraversal(vector, config) {
     let cursor = null;
     const decisions = [];
 
-    for (const comp of ordered) {
+    const pending = readingOrder.slice();
+    while (pending.length) {
+        // Nearest-first selection among the components still to draw.
+        let pickIdx = 0;
+        if (config.nearestRouting !== false && cursor) {
+            let bestD = Infinity;
+            for (let i = 0; i < pending.length; i++) {
+                const n = nearestNodeInComponent(pending[i], nodeById, segById, cursor);
+                if (n && n.distance < bestD) { bestD = n.distance; pickIdx = i; }
+            }
+        }
+        const comp = pending.splice(pickIdx, 1)[0];
+
         const compEdges = comp.edgeIds.filter((id) => segById.has(id));
         if (!compEdges.length) continue;
 
-        const start = chooseStartNode(comp, nodeById, segById);
+        // Enter the component at the node closest to the pen, rather
+        // than always at its topmost-leftmost free tip.
+        const nearest = (config.nearestRouting !== false && cursor)
+            ? nearestNodeInComponent(comp, nodeById, segById, cursor)
+            : null;
+        const start = nearest ? nearest.nodeId : chooseStartNode(comp, nodeById, segById);
         if (start == null) continue;
 
         if (cursor && config.emitConnectors) {
@@ -176,6 +199,19 @@ export function buildTraversal(vector, config) {
             complete: visitedEdges.size === segments.length,
         },
     };
+}
+
+// Closest node of a component to `from`, used for both "which component
+// next" and "where to enter it".
+function nearestNodeInComponent(comp, nodeById, segById, from) {
+    let best = null;
+    for (const nid of comp.nodeIds) {
+        const n = nodeById.get(nid);
+        if (!n || !n.edgeIds.some((eid) => segById.has(eid))) continue;
+        const d = Math.hypot(n.xPx - from.x, n.yPx - from.y);
+        if (!best || d < best.distance) best = { nodeId: nid, distance: d };
+    }
+    return best;
 }
 
 function pointOf(node) {

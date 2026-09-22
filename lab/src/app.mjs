@@ -117,7 +117,7 @@ const CONFIG_GROUPS = [
         'mergeAdjacentJunctions', 'simplifyTolerancePx', 'smoothingPasses', 'smoothingStrength',
         'preserveEndpointsWhileSmoothing',
     ]],
-    [GROUPS.TRAVERSAL, ['emitConnectors', 'traversalResampleSpacingPx']],
+    [GROUPS.TRAVERSAL, ['nearestRouting', 'emitConnectors', 'traversalResampleSpacingPx']],
 ];
 
 const LAB_CONTROLS = [];
@@ -633,7 +633,9 @@ function applyAnimationRoute() {
     const fraction = animator.totalLength > 0 ? animator.progress : 0;
     const useTween = state.animationPath === 'tween'
         && state.tweenResult && state.tweenResult.curves.length;
-    animator.setRoute(useTween ? tweenAnimationRoute(state.tweenResult) : r.traversal.animation);
+    animator.setRoute(useTween
+        ? tweenAnimationRoute(state.tweenResult, { nearestRouting: state.config.nearestRouting })
+        : r.traversal.animation);
     // Preserve position proportionally so switching source mid-run does
     // not snap the dot back to the start.
     animator.seekToFraction(fraction);

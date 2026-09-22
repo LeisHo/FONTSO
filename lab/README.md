@@ -200,6 +200,21 @@ Measured on Comic Sans `H` at progression 1: 2 welds at the stem/crossbar
 junctions, 4 crossings declined, 10 polylines reduced to 8. At low
 progression there are no crossings yet and nothing is welded.
 
+**Nearest-Curve Routing** (Traversal group, on by default) decides which
+piece to draw next by proximity to the pen rather than by a fixed
+reading order, and enters it at its closest point. Greedy
+nearest-neighbour — not a global optimum, but it removes the long
+pointless hops a fixed order produces. Measured on Comic Sans `Hello`:
+midline pen-up travel **1022.1px → 658.6px** (-36%); tween route
+**1923.2px → 785.5px** (-59%, from 38.8% of the route down to 20.6%).
+
+A closed curve is simply rotated to start at the nearest point. An
+**open** curve entered in the middle would leave a tail, so it is drawn
+as two runs joined by a backtrack connector (entry → near end, back,
+→ far end): the whole curve is covered and the hop is still the shortest
+available. That is why the tween route's run count rises from 19 to 27
+on `Hello` while the curve count stays at 19.
+
 **Animation Path** (in the Animation group) switches the dot between the
 midline and the tween geometry. On Comic Sans `H` that is a 625.6px route
 versus 1721px, since the tween has two curves per segment.

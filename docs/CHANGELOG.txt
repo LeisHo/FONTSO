@@ -582,6 +582,52 @@ Verified (live, real browser, driving the real controls):
   connectors between the letters.
 
 --------------------------------------------------------------------------------
+2026-09-22  -  6:04 AM - 6:07 AM
+
+Added nearest-curve routing, per request: when deciding which curve to
+transition to and at which point, pick the curve closest to the animation
+dot and enter it at its nearest point.
+
+Added:
+- lab/src/routing.mjs -- routeNearest(), closestPointOnPolyline(),
+  runsFromEntry(). Greedy nearest-neighbour: not a global optimum (that
+  is the travelling-salesman problem) but it removes the obviously silly
+  hops a fixed order produces, such as crossing the whole glyph to reach
+  whichever component happened to sort first. The first pick has no pen
+  position yet and falls back to topmost-leftmost, so a run stays
+  reproducible.
+- Nearest-Curve Routing On/Off in the Traversal group (default on), so
+  the previous deterministic reading order remains available for
+  comparison rather than being silently replaced.
+- tweenAnimationRoute() now reports penUpTravel, curveCount and runCount,
+  which is what made the before/after comparison measurable instead of a
+  matter of opinion.
+
+Design decision -- entering an OPEN curve at an interior point:
+  A closed curve can genuinely start anywhere and is simply rotated so
+  the nearest point becomes its start and end; nothing is lost. An open
+  curve entered in the middle leaves a tail. Three options existed:
+  restrict entry to the two endpoints (ignores the instruction), drop the
+  short tail (loses geometry), or cover both halves. This does the third
+  -- entry -> nearer end, a backtrack connector to the entry, then entry
+  -> farther end. The whole curve is drawn, the initial hop is still the
+  shortest available, and the extra move is an explicit connector rather
+  than a hidden teleport. When the nearest point IS an endpoint (common)
+  it degenerates to a single run with no extra connector.
+
+Verified (live, real browser, Comic Sans "Hello"):
+- Midline route: pen-up travel 1022.1px (reading order) -> 658.6px
+  (nearest-first), a 363.5px / 36% reduction. Traversal still complete
+  in both modes.
+- Tween route at progression 0.6: pen-up travel 1923.2px -> 785.5px, a
+  1137.7px / 59% reduction, dropping pen-up from 38.8% of the total
+  route to 20.6%. Total route length 4958.9px -> 3821.2px.
+- All 19 tween curves still covered in both modes -- the saving is
+  genuinely in travel, not in skipped geometry. Run count rises 19 -> 27
+  under nearest routing, which is exactly the interior-entry split above
+  (8 curves entered mid-curve, each drawn as two runs).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

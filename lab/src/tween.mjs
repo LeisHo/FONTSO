@@ -39,6 +39,7 @@
 // ====================================================================
 
 import { sampleDistance } from './distanceTransform.mjs';
+import { routeNearest } from './routing.mjs';
 
 export const DEFAULT_TWEEN = {
     enabled: false,
@@ -399,28 +400,58 @@ function unit(a, b) {
 // jump between them is marked 'connector' exactly as the real traversal
 // marks a pen-up, so the animator's own on:draw / on:connector readout
 // stays meaningful and the dot does not appear to teleport unexplained.
-export function tweenAnimationRoute(tween) {
+export function tweenAnimationRoute(tween, { nearestRouting = true } = {}) {
+    const items = [];
+    for (const c of tween.curves) {
+        if (c.left && c.left.length > 1) items.push({ id: `${c.edgeId}:left`, pts: c.left });
+        if (c.right && c.right.length > 1) items.push({ id: `${c.edgeId}:right`, pts: c.right });
+    }
+
+    // Two orderings, so the nearest-neighbour result can be compared
+    // against the naive one rather than taken on faith.
+    const ordered = nearestRouting
+        ? routeNearest(items, null)
+        : items.map((it) => ({ id: it.id, runs: [it.pts], entryDistance: 0 }));
+
     const flat = [];
-    const pushRun = (pointsArr, kind, edgeId) => {
+    let penUpTravel = 0;
+    const pushRun = (pointsArr, edgeId) => {
+        if (flat.length) {
+            const prev = flat[flat.length - 1].p;
+            const gap = Math.hypot(prev.x - pointsArr[0].x, prev.y - pointsArr[0].y);
+            if (gap > 1e-6) {
+                // The hop to this run is an explicit pen-up, exactly as
+                // the midline traversal marks one, so the animator's
+                // on:draw / on:connector readout stays meaningful.
+                flat.push({ p: pointsArr[0], kind: 'connector', edgeId: null });
+                penUpTravel += gap;
+            }
+        }
         for (let i = 0; i < pointsArr.length; i++) {
             const p = pointsArr[i];
             if (flat.length) {
                 const prev = flat[flat.length - 1].p;
                 if (Math.hypot(prev.x - p.x, prev.y - p.y) < 1e-6) continue;
-                if (i === 0) flat.push({ p, kind: 'connector', edgeId: null });
             }
-            flat.push({ p, kind, edgeId });
+            flat.push({ p, kind: 'draw', edgeId });
         }
     };
 
-    for (const c of tween.curves) {
-        if (c.left && c.left.length > 1) pushRun(c.left, 'draw', c.edgeId);
-        if (c.right && c.right.length > 1) pushRun(c.right, 'draw', c.edgeId);
+    for (const entry of ordered) {
+        const edgeId = parseInt(String(entry.id).split(':')[0], 10);
+        for (const run of entry.runs) pushRun(run, Number.isNaN(edgeId) ? null : edgeId);
     }
 
     const cumulative = [0];
     for (let i = 1; i < flat.length; i++) {
         cumulative.push(cumulative[i - 1] + Math.hypot(flat[i].p.x - flat[i - 1].p.x, flat[i].p.y - flat[i - 1].p.y));
     }
-    return { flat, cumulative, totalLength: cumulative[cumulative.length - 1] || 0 };
+    return {
+        flat,
+        cumulative,
+        totalLength: cumulative[cumulative.length - 1] || 0,
+        penUpTravel,
+        curveCount: items.length,
+        runCount: ordered.reduce((n, e) => n + e.runs.length, 0),
+    };
 }
