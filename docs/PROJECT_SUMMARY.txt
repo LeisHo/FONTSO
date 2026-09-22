@@ -2,7 +2,8 @@ FONTSO -- PROJECT SUMMARY
 ================================================================================
 
 Status: working geometry feasibility prototype (Font Path Laboratory), as of
-2026-09-22, sitting alongside an unused blank HTML scaffold. See
+2026-09-22, sitting alongside an unused blank HTML scaffold. Version control:
+https://github.com/LeisHo/FONTSO (PRIVATE). See
 PROJECT_PROGRESS.md for what's actively being worked on right now, and
 CHANGELOG.txt for the full historical log -- this file stays a mid-altitude
 snapshot, not a duplicate of either.

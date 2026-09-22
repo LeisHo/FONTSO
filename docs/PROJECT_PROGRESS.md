@@ -29,6 +29,11 @@ Nothing in progress — see What's next.
   workspace-standard dev panel. The old bespoke side panel is gone and
   the canvas is full-bleed. This resolves the open question that used to
   sit in this section.
+- **Pushed to GitHub** — https://github.com/LeisHo/FONTSO, **private**,
+  branch `main`. Test fonts, `node_modules/` and `data/raw/` are excluded;
+  a pre-push audit confirmed no secrets or font binaries reached the
+  remote. Flip to public only after removing the `keyps.txt` path
+  references in `README.md` and `api/save-settings.js`.
 - **Blank HTML scaffold (root)** — still present and verified, still
   unused by the lab. It holds the *other* copy of the dev panel plus the
   UI Layout Engine, which the lab does not need (one layout element).

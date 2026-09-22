@@ -411,6 +411,48 @@ Verified (live, real browser, driving the REAL panel controls):
   tween geometry, not the midline.
 
 --------------------------------------------------------------------------------
+2026-09-22  -  5:51 AM - 5:52 AM
+
+Initialised git and pushed the project to GitHub as a PRIVATE repository:
+https://github.com/LeisHo/FONTSO (branch main, commit ddee500, 51 files,
+21,101 insertions).
+
+Decisions:
+- PRIVATE, not public. The request was "create a repo and push", which does
+  not by itself mean publish; public is the hard-to-undo direction (content
+  is cached and indexed even after deletion) and private -> public is one
+  click later. Stated to the user rather than assumed silently.
+- A real pre-push audit was run against the ACTUAL staged file list rather
+  than trusting .gitignore, because this project references keyps.txt,
+  GITHUB_TOKEN and DEV_PANEL_SAVE_SECRET, and lab/test-fonts/ holds
+  Microsoft OS fonts that are not redistributable.
+
+Audit results (all clean, checked before the repo was created):
+- No token-shaped strings anywhere in the staged set (gh[pousr]_*,
+  github_pat_*, AKIA*, PRIVATE KEY blocks).
+- GITHUB_TOKEN / DEV_PANEL_SAVE_SECRET appear only as environment-variable
+  NAMES in comments and process.env reads. The client-side constant in
+  src/main.js is the empty string, as designed.
+- No .ttf/.otf/.woff staged -- only lab/test-fonts/manifest.json, which is
+  the tracked index. node_modules/, data/raw/ (inherited HANDYSET files)
+  and package-lock.json all correctly excluded.
+- 1.4MB total. Largest files are the two dev-panel copies (274,000 and
+  273,999 bytes) and the vendored opentype.js (245,161 bytes), which
+  carries its MIT licence header.
+
+Verified after the push (on the remote, not just locally):
+- gh reports visibility PRIVATE, default branch main.
+- git ls-tree of origin/main lists 51 files, matching the local commit, and
+  contains no font binaries, node_modules or data/raw paths.
+- Local HEAD and origin/main are the same SHA (ddee5005d4f4...).
+
+Note: api/save-settings.js and README.md both reference the local absolute
+path J:\CLAUDE\PROJECTS\keyps.txt as the place the real secret values
+live. That is a pointer, not a value, and it is genuinely useful setup
+documentation -- but it does disclose a local directory layout, so it is
+worth removing if this repository is ever made public.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
