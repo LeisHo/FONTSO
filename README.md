@@ -58,6 +58,38 @@ FONTSO/
 └── CLAUDE.md                <project conventions, file map, gotchas — read this first>
 ```
 
+## Deployment (Vercel)
+
+The repository root holds two pages: `index.html`, the workspace-standard
+scaffold (which has only the built-in dev-panel groups, by design), and
+`lab/index.html`, the Font Path Laboratory, which is the actual project.
+Vercel serves the root, so a bare deployment opens on the scaffold and
+looks as though every project setting is missing. `vercel.json` therefore
+redirects `/` to `/lab/index.html`.
+
+A **redirect**, not a rewrite, deliberately. A rewrite keeps the browser's
+URL at `/` while serving `lab/index.html`, so every relative path in that
+page (`src/app.mjs`, `devpanel.css`, `test-fonts/manifest.json`) would
+resolve against the root instead of `/lab/` and 404. `permanent: false`
+(307) on purpose: a permanent redirect is cached hard by browsers and is
+painful to undo. The scaffold stays reachable at `/index.html`.
+
+`vercel.json` carries no explanatory keys. Vercel validates the file
+against a strict schema and **fails the build on any unrecognised
+top-level property** — an earlier version with a `_comment_redirect` array
+was silently rejected, and the previous deployment kept being served with
+no obvious sign anything was wrong. Comments belong here, not in that file.
+
+Two things are deliberately absent from the deployment:
+
+- **No bundled fonts.** The font binaries in `data/Fonts/` and
+  `lab/test-fonts/` are gitignored (size and licensing), so the file picker
+  is the only way to load a font on the deployed site. The picker probes
+  each manifest entry before offering it, so it will not advertise a font
+  it cannot load.
+- **`/api/fonts` does not exist.** It is an endpoint of the local
+  `scripts/active/serve.py` only.
+
 ## Optional: git-tracked settings (CLAUDE.md §12l)
 
 `localStorage` is the working default and needs no setup. To make a setting

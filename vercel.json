@@ -1,26 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-
-  "_comment_redirect": [
-    "The repository root holds TWO pages: index.html (the blank",
-    "workspace-standard scaffold, which has only the built-in dev-panel",
-    "groups by design) and lab/index.html (the Font Path Laboratory,",
-    "which is the actual project). Vercel serves the root, so the",
-    "deployment opened on the scaffold and appeared to be missing every",
-    "project setting.",
-    "",
-    "This is a REDIRECT, not a rewrite, deliberately. A rewrite would",
-    "keep the browser's URL at '/' while serving lab/index.html, and",
-    "every relative path in that page (src/app.mjs, devpanel.css,",
-    "test-fonts/manifest.json) would then resolve against the root",
-    "instead of /lab/ and 404. A redirect changes the URL, so relative",
-    "paths resolve correctly.",
-    "",
-    "permanent:false (307) on purpose. A permanent redirect is cached",
-    "hard by browsers and is genuinely painful to undo; this one can be",
-    "changed or removed at any time. The scaffold is still reachable at",
-    "/index.html for anyone who wants it."
-  ],
   "redirects": [
     { "source": "/", "destination": "/lab/index.html", "permanent": false }
   ]
