@@ -1198,7 +1198,7 @@ window.renderFontLabDevGroups = function renderFontLabDevGroups() {
 // Bumped alongside the ?v= query on the script tags, so "what build is
 // that tab running?" is answerable in one line instead of inferred from
 // behaviour.
-const BUILD = 19;
+const BUILD = 20;
 
 const SETTINGS_ENDPOINT = '/api/save-settings';
 const FONT_DIR = 'data/processed/fonts/';
@@ -1237,7 +1237,27 @@ async function remoteGetSettings() {
 // GET -> merge -> POST, never a blind POST: the settings document holds
 // several independent top-level keys written by different code paths,
 // and a blind overwrite from any one of them erases the others.
-async function remoteSave({ patch = {}, files = [] } = {}) {
+//
+// SERIALISED through one queue, ported from LENTICULOSO/src/main.js,
+// which documents the failure this prevents: two overlapping GET->POST
+// cycles each merge onto the same stale GET, so the later POST silently
+// drops the earlier one's key. This document now has five independent
+// top-level fields - importedFonts, learnedOrders, fontSettings,
+// devPanel, lastSaveStamp - written from more than one path, so the
+// window for that is real rather than theoretical. Queueing makes a
+// second Sync wait for the first instead of racing it.
+let remoteQueue = Promise.resolve();
+
+function remoteSave(args) {
+    const run = () => remoteSaveNow(args);
+    const p = remoteQueue.then(run, run);
+    // The queue must survive a rejection, or one failed save would wedge
+    // every later one behind a permanently rejected promise.
+    remoteQueue = p.catch(() => ({ ok: false }));
+    return p;
+}
+
+async function remoteSaveNow({ patch = {}, files = [] } = {}) {
     try {
         const current = (await remoteGetSettings()) || {};
         const headers = { 'Content-Type': 'application/json' };

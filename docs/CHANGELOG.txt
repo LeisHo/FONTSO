@@ -1793,6 +1793,47 @@ on quota grounds, which IndexedDB does not share. Declined in favour of
 fixing the repo save itself.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  5:08 AM - 5:20 AM
+
+Pointed at LENTICULOSO as a project where saving works, and asked to fix
+FONTSO from it.
+
+WHAT THE COMPARISON RULED OUT, all measured rather than assumed:
+- The ENDPOINT is not the difference. LENTICULOSO's api/save-settings.js
+  is strictly LESS capable than FONTSO's current one: no
+  VERCEL_GIT_REPO_OWNER/SLUG fallback, token required even for a read,
+  and no per-file writing at all.
+- The SECRET is not the difference. Compared by SHA-256 without printing
+  either value: LENTICULOSO, FONTSO, HANDYSET and HANDY DANDIES all
+  carry the identical 32-character value (15332d410be6...), confirming
+  LENTICULOSO's own comment that it is one workspace-wide shared value.
+- A DUPLICATED SYNC LISTENER is not the difference. syncButtons collects
+  the header button plus every .dev-buttons button whose onclick calls
+  saveDevPanelSettings, which could have put one element in the list
+  twice; checked live - two DISTINCT elements, and one real click
+  produces exactly one POST.
+
+WHAT WAS GENUINELY MISSING, and is now ported: LENTICULOSO SERIALISES
+its writes through a single queue, and documents why - two overlapping
+GET->POST cycles each merge onto the same stale GET, so the later POST
+silently drops the earlier one's key. FONTSO's settings document now
+carries five independent top-level fields (importedFonts, learnedOrders,
+fontSettings, devPanel, lastSaveStamp) written from more than one path,
+so that window is real rather than theoretical. remoteSave now queues;
+the queue swallows rejections, or one failed save would wedge every
+later one behind a permanently rejected promise.
+
+STILL NOT REPRODUCED. Both FONTSO load paths save correctly from here
+(file picker fd94f3d, dropdown 8b95f64), and no commit from the user's
+browser exists at all - so their Sync reaches neither fonts nor
+settings, and what they read as "other dev panel things save" is
+localStorage. The stale-tab explanation from the previous entry remains
+the only one fitting every observation. Build 20 reports the exact cause
+in the status line rather than falling back silently, and
+window.fontLab.build now answers "which build is that tab running" in
+one line.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
