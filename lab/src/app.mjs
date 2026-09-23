@@ -1195,7 +1195,12 @@ async function syncToRemote() {
         if (anchors) state.learnedOrders = writeLearned(state.learnedOrders, state.fontInfo, state.text, anchors);
     }
 
-    const patch = { importedFonts: manifest, learnedOrders: state.learnedOrders };
+    // A unique stamp per save attempt. This is what makes a lost
+    // response distinguishable from a failed write: if the document
+    // comes back carrying this exact value, the commit happened no
+    // matter what the POST appeared to do.
+    const saveStamp = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const patch = { importedFonts: manifest, learnedOrders: state.learnedOrders, lastSaveStamp: saveStamp };
     if (typeof window.captureFullDevPanelState === 'function') {
         patch.devPanel = window.captureFullDevPanelState();
     }
@@ -1203,6 +1208,22 @@ async function syncToRemote() {
     setStatus(pending.length ? `Saving ${pending.length} font(s) + settings…` : 'Saving settings…');
     const res = await remoteSave({ patch, files });
     if (!res.ok) {
+        // A POST can COMMIT and still report failure: the write reaches
+        // GitHub, then the response is lost to a dropped connection or a
+        // serverless timeout, and remoteSave's catch reports an error for
+        // a save that actually succeeded. Reported as a plain failure
+        // that was exactly the false negative behind "it said saved
+        // locally but it did save".
+        //
+        // So an apparent failure is checked, not believed: re-read the
+        // document and look for this attempt's own stamp.
+        const after = await remoteGetSettings();
+        if (after && after.lastSaveStamp === saveStamp) {
+            for (const f of pending) markSaved(f.key, FONT_DIR + f.fileName);
+            refreshFontList();
+            setStatus('Saved to the repo — the confirmation was lost in transit, but the write landed.', 'ok');
+            return;
+        }
         // Not an error the user needs to act on: localStorage already
         // holds the panel state, so nothing was lost.
         setStatus(`Saved locally only — remote save unavailable (${res.error || 'no endpoint'}).`, 'warn');
