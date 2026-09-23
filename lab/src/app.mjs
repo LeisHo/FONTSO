@@ -938,10 +938,43 @@ window.renderFontLabDevGroups = function renderFontLabDevGroups() {
 const SETTINGS_ENDPOINT = '/api/save-settings';
 const FONT_DIR = 'data/processed/fonts/';
 
-// Client half of §12l's shared secret. Empty means "no remote writes
-// from this build"; the local server only enforces it when it has one
-// set in its own environment.
-const DEV_PANEL_SAVE_SECRET = '';
+// Client half of §12l's shared secret.
+//
+// PER-DEVICE, IN localStorage - NOT a constant in this file. This file is
+// served verbatim to every visitor and committed to a PUBLIC repo, so a
+// hardcoded value would be readable by anyone and would not be a secret at
+// all; it would only look like one. Kept in localStorage it never enters
+// the repo, never reaches another visitor, and still authorises this
+// browser's own writes.
+//
+// Set it once per browser from the console:
+//     fontLab.setSaveSecret('<the value from Vercel>')
+// and check with fontLab.hasSaveSecret(). Clear it with setSaveSecret(null).
+const SAVE_SECRET_KEY = 'fontso.devPanelSaveSecret';
+
+function getSaveSecret() {
+    // Wrapped: localStorage throws in a private window or with site data
+    // blocked, and a save that cannot read its secret should degrade to an
+    // unauthorised save attempt, not take the whole page down.
+    try {
+        return window.localStorage.getItem(SAVE_SECRET_KEY) || '';
+    } catch {
+        return '';
+    }
+}
+
+function setSaveSecret(value) {
+    try {
+        if (value === null || value === undefined || value === '') {
+            window.localStorage.removeItem(SAVE_SECRET_KEY);
+            return 'cleared';
+        }
+        window.localStorage.setItem(SAVE_SECRET_KEY, String(value).trim());
+        return 'set for this browser';
+    } catch (e) {
+        return 'FAILED: ' + ((e && e.message) || e);
+    }
+}
 
 async function remoteGetSettings() {
     try {
@@ -961,7 +994,8 @@ async function remoteSave({ patch = {}, files = [] } = {}) {
     try {
         const current = (await remoteGetSettings()) || {};
         const headers = { 'Content-Type': 'application/json' };
-        if (DEV_PANEL_SAVE_SECRET) headers['x-dev-panel-secret'] = DEV_PANEL_SAVE_SECRET;
+        const secret = getSaveSecret();
+        if (secret) headers['x-dev-panel-secret'] = secret;
         const resp = await fetch(SETTINGS_ENDPOINT, {
             method: 'POST',
             headers,
@@ -1355,4 +1389,6 @@ renderer.draw();
 // Exposed deliberately: this is a laboratory. Being able to poke the
 // pipeline from the console — re-run with different config, dump a
 // result, diff two fonts — is a feature, not a leak.
-window.fontLab = { state, renderer, animator, viewport, rerun, runPipeline, toDebugJSON, loadFontFromUrl };
+window.fontLab = {
+    setSaveSecret,
+    hasSaveSecret: () => !!getSaveSecret(), state, renderer, animator, viewport, rerun, runPipeline, toDebugJSON, loadFontFromUrl };

@@ -13,10 +13,19 @@
 // Required Vercel project environment variables (see README.md):
 //   GITHUB_TOKEN           - fine-grained PAT, contents:read+write on this repo
 //   DEV_PANEL_SAVE_SECRET  - shared anti-abuse token, must match the client's copy (POST only)
-//   GITHUB_REPO            - "owner/repo". Deliberately has NO default: this
-//                            scaffold has no repo yet, and a wrong default
-//                            would fail confusingly (or, worse, write
-//                            somewhere unintended) instead of saying so.
+//   GITHUB_REPO            - "owner/repo". OPTIONAL as of 2026-09-23: when it
+//                            is unset, the repo is taken from Vercel's own
+//                            VERCEL_GIT_REPO_OWNER / VERCEL_GIT_REPO_SLUG,
+//                            which Vercel injects automatically for a
+//                            git-connected project. That is the deployment's
+//                            authoritative git metadata, not a guessed
+//                            default, so it cannot point somewhere
+//                            unintended the way a hardcoded fallback could -
+//                            which was the original reason for having none.
+//                            An explicit GITHUB_REPO still wins, for the case
+//                            where settings belong in a DIFFERENT repo from
+//                            the one being deployed. Missing GITHUB_REPO was
+//                            the sole reason every Sync 500d in practice.
 // Optional (defaulted below):
 //   GITHUB_BRANCH          - defaults to "main"
 //   SETTINGS_FILE_PATH     - defaults to "data/processed/dev-panel-settings.json"
@@ -24,6 +33,16 @@
 // Both secrets' real VALUES live in J:\CLAUDE\PROJECTS\keyps.txt (GITHUB_TOKEN
 // under the "GOTHOT" label) and are set in Vercel's own environment-variable
 // UI — never committed here, never shipped to the client.
+
+// Where the settings file lives. An explicit GITHUB_REPO wins; otherwise
+// this deployment's own git origin, which Vercel provides.
+function resolveRepo() {
+    const explicit = (process.env.GITHUB_REPO || '').trim();
+    if (explicit) return explicit;
+    const owner = (process.env.VERCEL_GIT_REPO_OWNER || '').trim();
+    const slug = (process.env.VERCEL_GIT_REPO_SLUG || '').trim();
+    return owner && slug ? `${owner}/${slug}` : '';
+}
 
 const DEFAULT_BRANCH = 'main';
 const DEFAULT_PATH = 'data/processed/dev-panel-settings.json';
@@ -36,10 +55,14 @@ module.exports = async (req, res) => {
 
     const token = process.env.GITHUB_TOKEN;
     const secret = process.env.DEV_PANEL_SAVE_SECRET;
-    const repo = process.env.GITHUB_REPO;
+    const repo = resolveRepo();
     const missing = [];
-    if (!token) missing.push('GITHUB_TOKEN');
-    if (!repo) missing.push('GITHUB_REPO');
+    // A PUBLIC repo's contents are readable anonymously, so a read does not
+    // need the token. Keeping GET alive without it means a deployment that
+    // has lost its token still RESTORES saved settings and fonts; only
+    // saving breaks. Writing always needs it.
+    if (!token && req.method === 'POST') missing.push('GITHUB_TOKEN');
+    if (!repo) missing.push('GITHUB_REPO (and no VERCEL_GIT_REPO_OWNER/SLUG to fall back on)');
     if (req.method === 'POST' && !secret) missing.push('DEV_PANEL_SAVE_SECRET');
     if (missing.length) {
         res.status(500).json({ ok: false, error: `Server not configured - missing: ${missing.join(', ')}` });
@@ -54,7 +77,7 @@ module.exports = async (req, res) => {
     const path = process.env.SETTINGS_FILE_PATH || DEFAULT_PATH;
     const apiUrl = `https://api.github.com/repos/${repo}/contents/${path}`;
     const headers = {
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
         'Content-Type': 'application/json',
