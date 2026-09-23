@@ -1198,7 +1198,7 @@ window.renderFontLabDevGroups = function renderFontLabDevGroups() {
 // Bumped alongside the ?v= query on the script tags, so "what build is
 // that tab running?" is answerable in one line instead of inferred from
 // behaviour.
-const BUILD = 20;
+const BUILD = 21;
 
 const SETTINGS_ENDPOINT = '/api/save-settings';
 const FONT_DIR = 'data/processed/fonts/';
@@ -1255,6 +1255,30 @@ function remoteSave(args) {
     // every later one behind a permanently rejected promise.
     remoteQueue = p.catch(() => ({ ok: false }));
     return p;
+}
+
+// Turn a failed save into something actionable.
+//
+// The old message was "remote save unavailable (no endpoint)", which
+// named neither the status nor the URL and so could not distinguish a
+// missing function from a rejected key from an unreachable host. That
+// vagueness cost real time: a reported "no endpoint" was read as a stale
+// build, when a stale build would in fact have produced "(Unauthorized)"
+// - the server answers a missing key with a 401 AND a JSON body, so
+// res.error would have been set. "no endpoint" specifically means the
+// response carried NO parseable JSON error, which on this host is a 404
+// (Vercel serves text/plain for an unknown path, so resp.json() throws
+// and data ends up {}).
+function describeSaveFailure(res) {
+    const where = `${location.origin}${SETTINGS_ENDPOINT}`;
+    if (res.status === 404) {
+        return `${where} returned 404 - there is no save endpoint at this origin. `
+            + 'A Vercel deployment serves it from api/save-settings.js; a plain static server does not.';
+    }
+    if (res.status === 0) {
+        return `could not reach ${where} at all (${res.error || 'network error'}).`;
+    }
+    return `${where} returned HTTP ${res.status}${res.error ? ` - ${res.error}` : ' with no error message'}.`;
 }
 
 async function remoteSaveNow({ patch = {}, files = [] } = {}) {
@@ -1374,7 +1398,7 @@ async function syncToRemote() {
         const onLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:';
         setStatus(onLocal
             ? `Saved to localStorage. The local dev server cannot commit to the repo — it needs GITHUB_TOKEN in its own environment. Restart it with that variable set, or use the deployed site. (${res.error || 'no endpoint'})`
-            : `Saved locally only — remote save unavailable (${res.error || 'no endpoint'}).`, 'warn');
+            : `Saved to localStorage only. The repo save failed: ${describeSaveFailure(res)}`, 'error');
         return;
     }
     for (const f of pending) markSaved(f.key, FONT_DIR + f.fileName);
