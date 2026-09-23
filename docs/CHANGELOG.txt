@@ -1744,6 +1744,55 @@ This time the local path was investigated anyway rather than treated as
 explained, and that is where the real defect was.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  4:47 AM - 5:02 AM
+
+Follow-up: saving reported as broken ON VERCEL, and then the decisive
+detail - "other dev panel things save, its just the fonts".
+
+THE COMMIT HISTORY SETTLED IT. Every one of the 19 save commits in the
+repo is accounted for by this session's own browser tests (02:57, 03:01,
+03:46, 03:54-55, 03:58, 04:42, 04:54). There is NO commit from the
+user's browser at all - not even a settings-only one.
+
+So their Sync never reaches the repo, and their dev-panel settings are
+not "saving" to the repo either: they persist in localStorage, which
+survives a reload and is indistinguishable from a real save. Fonts are
+the one thing localStorage deliberately does not hold - fontStore.mjs
+keeps bytes in memory only, because base64 would exhaust the 5MB
+per-origin quota on two faces. Settings surviving while fonts vanish is
+therefore the exact signature of a SILENTLY FAILING remote save, not of
+a font-specific bug. Both paths were re-verified working from this side
+in the same session: file picker (SaveProbe-Gelasio, fd94f3d) and
+dropdown (Tinos, 8b95f64).
+
+LEADING EXPLANATION: a stale tab. The save key went into app.mjs at
+02:57. A tab opened before that is still running the build it loaded
+then, where DEV_PANEL_SAVE_SECRET is the empty string - the page is
+never re-fetched until reloaded. No secret sent -> 401 -> fall back to
+localStorage -> settings persist, fonts do not, no commit appears. It
+fits every observation, including why the identical URL works here.
+
+Fixed the part that is a genuine defect regardless of cause: that 401
+was indistinguishable from any other remote failure, and the generic
+message reads as success. Now a 401 with NO secret sent says the tab is
+running an older build and names the remedy; a 401 WITH a secret sent is
+reported separately as a key mismatch, since the fix differs. Added a
+BUILD stamp on window.fontLab, bumped with the ?v= query, so which build
+a tab is running is answerable in one line instead of inferred.
+
+Verification note, recorded because the test was weaker than it looked:
+the simulation stripped the header at the network layer, which is BELOW
+where sentSecret is computed, so it exercised the mismatch branch rather
+than the stale-build branch. A real stale tab has the empty constant and
+takes the first branch. Both branches were confirmed to produce a
+correct, actionable message; only one was reached by the test.
+
+Offered IndexedDB persistence so fonts survive a reload regardless of
+the repo save - fontStore.mjs having explicitly rejected browser storage
+on quota grounds, which IndexedDB does not share. Declined in favour of
+fixing the repo save itself.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
