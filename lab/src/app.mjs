@@ -194,6 +194,11 @@ function buildFontGroup() {
         input.type = 'file';
         input.className = 'lab-file-input';
         input.accept = '.ttf,.otf,.woff,.ttc,font/ttf,font/otf';
+        // Multi-select: comparing how several faces skeletonise is the
+        // core activity here, and picking them one at a time made that
+        // needlessly slow. Every file in the batch is parsed and kept, so
+        // they all appear in the dropdown to switch between.
+        input.multiple = true;
         input.addEventListener('change', onFontFileChosen);
         row.appendChild(input);
     });
@@ -1103,20 +1108,58 @@ function onAnimationFrame(frame) {
     renderer.draw();
 }
 
+// Accepts a BATCH. One bad file does not abort the rest: a folder of
+// fonts routinely contains something opentype.js will not parse, and
+// losing the other nine to it would be the wrong trade. Failures are
+// collected and reported by name at the end.
+//
+// The FIRST file that parses becomes the active one, not the last:
+// selection order in the dialog is what the user just expressed, and
+// ending up on whichever font happened to sort last is surprising. The
+// rest are kept in the store and reachable from the dropdown.
 async function onFontFileChosen(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    setStatus('Parsing font…');
-    try {
-        const buf = await file.arrayBuffer();
-        rememberFont(file.name, buf);
-        const { font, info } = await loadFontFromFile(file);
-        adoptFont(font, info);
-        refreshFontList();
-    } catch (err) {
+    const files = [...(e.target.files || [])];
+    if (!files.length) return;
+
+    const failures = [];
+    let adopted = null;
+    let loaded = 0;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setStatus(files.length > 1
+            ? `Parsing ${i + 1} of ${files.length}: ${file.name}…`
+            : 'Parsing font…');
+        try {
+            const buf = await file.arrayBuffer();
+            const { font, info } = await loadFontFromFile(file);
+            // Only remembered once it has actually PARSED. Storing bytes
+            // first would put a file that cannot be read into the store
+            // and, from there, into a Sync commit.
+            rememberFont(file.name, buf);
+            loaded++;
+            if (!adopted) {
+                adoptFont(font, info);
+                adopted = file.name;
+            }
+        } catch (err) {
+            failures.push(`${file.name}: ${(err && err.message) || err}`);
+        }
+    }
+
+    refreshFontList();
+
+    if (!loaded) {
         state.font = null;
         if (ui.fontName) { ui.fontName.textContent = 'load failed'; ui.fontName.className = 'lab-status error'; }
-        setStatus(err.message || String(err), 'error');
+        setStatus(failures.length === 1 ? failures[0] : `No fonts could be parsed — ${failures.join('; ')}`, 'error');
+        return;
+    }
+
+    if (failures.length) {
+        setStatus(`Loaded ${loaded} of ${files.length} — showing ${adopted}. Failed: ${failures.join('; ')}`, 'warn');
+    } else if (loaded > 1) {
+        setStatus(`Loaded ${loaded} fonts — showing ${adopted}; the rest are in the dropdown.`);
     }
 }
 

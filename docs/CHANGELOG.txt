@@ -1193,6 +1193,45 @@ JSON object" and writes nothing, while a wrong secret returns 401. Worth
 reusing next time a secret needs checking without a commit.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  2:51 AM - 2:58 AM
+
+Requested: load multiple fonts at once.
+
+The file picker was single-file (files[0]). It now takes a batch:
+
+- input.multiple = true. Comparing how several faces skeletonise is the
+  core activity here, and picking them one at a time made that needlessly
+  slow.
+- onFontFileChosen parses every file in the batch and keeps them all, so
+  they all appear in the "imported" dropdown group to switch between.
+- ONE BAD FILE DOES NOT ABORT THE REST. A folder of fonts routinely holds
+  something opentype.js will not parse, and losing the other nine to it
+  would be the wrong trade. Failures are collected and reported by name
+  with their reason at the end.
+- The FIRST file that parses becomes active, not the last: selection
+  order is what the user just expressed, and landing on whichever font
+  happened to sort last is surprising.
+- rememberFont() is now called only AFTER a file has actually parsed.
+  Storing the bytes first, as the single-file version did, would put an
+  unreadable file into the store and from there into a Sync commit.
+- Per-file progress while a batch parses ("Parsing 3 of 7: X…"), since a
+  large batch is no longer instant.
+
+Verified (live, real browser): a synthetic 5-file batch - 4 real fonts
+plus a deliberately corrupt BROKEN.ttf - driven through the REAL handler
+via DataTransfer and a real change event, not by calling the function
+directly.
+- 4 of 5 loaded. Status read: 'Loaded 4 of 5 - showing Arimo-Regular.ttf.
+  Failed: BROKEN.ttf: opentype.js could not parse ... Unsupported
+  OpenType signature'.
+- The corrupt file is correctly ABSENT from the imported list, confirming
+  the parse-before-remember ordering.
+- Arimo adopted and the pipeline ran (4 segments on 'A').
+- All four are switchable from the dropdown afterwards, each re-running
+  the pipeline with its own geometry: Arimo 4 segments, Tinos 8, Comic
+  Neue 4, Dancing Script 6.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
