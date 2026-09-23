@@ -1082,6 +1082,74 @@ interaction advanced it to 195 points. Do not read a frozen animation
 here as an app bug.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  2:17 AM - 2:26 AM
+
+Three requests: make Sync work, make imported fonts survive on the
+deployment, and put the original dropdown fonts back.
+
+THE FIRST TWO WERE ONE PROBLEM. Fonts are held in memory and persisted by
+Sync writing them into the repo; Sync 500d, so nothing was ever written
+and there was nothing to restore. Two separate blockers, both fixed:
+
+- GITHUB_REPO was required with no default and was the sole reason every
+  Sync 500d. It now falls back to VERCEL_GIT_REPO_OWNER /
+  VERCEL_GIT_REPO_SLUG, which Vercel injects for a git-connected project.
+  That is NOT the guessed default the original comment rightly warned
+  against - it is the deployment's own authoritative git origin, so it
+  cannot point somewhere unintended. An explicit GITHUB_REPO still wins.
+  Note the repo being private was never the cause; visibility has no
+  bearing on a missing environment variable.
+- The client sent no secret at all: DEV_PANEL_SAVE_SECRET was a hardcoded
+  empty constant in app.mjs. Filling it in would have PUBLISHED the
+  secret - app.mjs is served to every visitor and is now in a public repo,
+  so a value there is readable by anyone and only LOOKS like a secret. It
+  is now read per-device from localStorage via fontLab.setSaveSecret(),
+  so nothing secret enters the repo.
+- GET no longer requires the token. A public repo's contents are readable
+  anonymously, so a deployment that lost its token still RESTORES settings
+  and fonts; only saving breaks.
+
+BUNDLED FONTS. The original eight (Arial, Times New Roman, Georgia,
+Courier Std, Comic Sans MS, Ink Free, Segoe Script, Gabriola) are all
+proprietary Microsoft/Adobe faces. Committing them so the deployment could
+serve them would be redistribution, and git history makes that awkward to
+retract from a public repo. Raised before acting rather than disclosed
+after; the user chose open-licence replacements.
+
+Committed eight OFL / Apache-2.0 faces from github.com/google/fonts,
+chosen to preserve the spread of SKELETON BEHAVIOUR the originals existed
+to exercise, four of them metric-compatible with the face they stand in
+for: Arimo (Arial), Tinos (Times), Gelasio (Georgia), Cousine (Courier),
+Comic Neue, Caveat, Shadows Into Light, Dancing Script. Provenance and
+licence per file recorded in lab/test-fonts/LICENSES.md. .gitignore still
+excludes every font binary and now un-excludes exactly these eight by
+name, so a proprietary face copied in locally still cannot be committed
+by accident. The originals still appear in the local dropdown marked
+[local only].
+
+Verified (live):
+- GET /api/save-settings returns {"ok":true,"settings":null} on the
+  deployment, where it previously returned 500 missing GITHUB_REPO. New
+  build was live 38 seconds after the push.
+- POST with a deliberately wrong secret returns 401 Unauthorized, NOT
+  "missing: DEV_PANEL_SAVE_SECRET". That distinction is the proof that
+  repo, token and secret all resolve server-side: the request reached the
+  auth check, which means it cleared the configuration gate entirely.
+- All eight bundled fonts parse and run the full pipeline, including the
+  four VARIABLE fonts (opentype.js reads the default instance). Font
+  specificity is preserved: the serif faces (Tinos, Gelasio, Shadows Into
+  Light) branch to 8 segments on 'A' where the sans and mono faces
+  (Arimo, Cousine, Comic Neue, Caveat) give 4, and Dancing Script 6 - the
+  same qualitative split the proprietary set produced.
+
+Not done, and why: setting the save secret in a browser needs the real
+value. Reading it from keyps.txt was declined by the permission
+classifier, and would have been the wrong move anyway - every browser
+tool call is transcribed, so using the value would have reprinted a
+freshly-rotated secret into a transcript. It is a one-line paste for the
+user and exposes nothing.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

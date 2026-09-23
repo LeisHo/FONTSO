@@ -1,13 +1,69 @@
 {
-  "_note": "Convenience list for the local font dropdown. These files are OS-installed fonts copied in for testing and are NOT redistributable - lab/test-fonts/*.ttf|otf is gitignored. The dropdown degrades to 'none found' if the files are absent; the file picker always works.",
+  "_note": "Convenience list for the local font dropdown. Every entry here is OFL- or Apache-2.0-licensed and IS committed, so the dropdown works on the deployment for every visitor. Chosen to reproduce the skeleton behaviour of the proprietary set this originally held (Arial/Times/Georgia/Courier/Comic Sans/Ink Free/Segoe Script/Gabriola), which could not be redistributed from a public repo. Non-redistributable faces copied in locally are still gitignored and still appear in the dropdown on a local server; the file picker always works regardless.",
   "fonts": [
-    { "file": "arial.ttf",      "label": "Arial (sans-serif)" },
-    { "file": "times.ttf",      "label": "Times New Roman (serif)" },
-    { "file": "georgia.ttf",    "label": "Georgia (serif, slab-ish)" },
-    { "file": "CourierStd.otf", "label": "Courier Std (OTF/CFF cubic)" },
-    { "file": "comic.ttf",      "label": "Comic Sans MS (irregular/humanist)" },
-    { "file": "Inkfree.ttf",    "label": "Ink Free (handwriting)" },
-    { "file": "segoesc.ttf",    "label": "Segoe Script (script)" },
-    { "file": "Gabriola.ttf",   "label": "Gabriola (decorative)" }
+    {
+      "file": "Arimo-Regular.ttf",
+      "label": "Arimo (sans-serif; Arial-metric)"
+    },
+    {
+      "file": "Tinos-Regular.ttf",
+      "label": "Tinos (serif; Times-metric)"
+    },
+    {
+      "file": "Gelasio-Regular.ttf",
+      "label": "Gelasio (serif, slab-ish; Georgia-metric)"
+    },
+    {
+      "file": "Cousine-Regular.ttf",
+      "label": "Cousine (monospace; Courier-metric)"
+    },
+    {
+      "file": "ComicNeue-Regular.ttf",
+      "label": "Comic Neue (irregular/humanist)"
+    },
+    {
+      "file": "Caveat-Regular.ttf",
+      "label": "Caveat (handwriting)"
+    },
+    {
+      "file": "ShadowsIntoLight-Regular.ttf",
+      "label": "Shadows Into Light (script)"
+    },
+    {
+      "file": "DancingScript-Regular.ttf",
+      "label": "Dancing Script (decorative)"
+    },
+    {
+      "file": "arial.ttf",
+      "label": "Arial (sans-serif) [local only]"
+    },
+    {
+      "file": "times.ttf",
+      "label": "Times New Roman (serif) [local only]"
+    },
+    {
+      "file": "georgia.ttf",
+      "label": "Georgia (serif, slab-ish) [local only]"
+    },
+    {
+      "file": "CourierStd.otf",
+      "label": "Courier Std (OTF/CFF cubic) [local only]"
+    },
+    {
+      "file": "comic.ttf",
+      "label": "Comic Sans MS (irregular/humanist) [local only]"
+    },
+    {
+      "file": "Inkfree.ttf",
+      "label": "Ink Free (handwriting) [local only]"
+    },
+    {
+      "file": "segoesc.ttf",
+      "label": "Segoe Script (script) [local only]"
+    },
+    {
+      "file": "Gabriola.ttf",
+      "label": "Gabriola (decorative) [local only]"
+    }
   ]
 }

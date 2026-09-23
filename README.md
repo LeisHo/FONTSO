@@ -82,11 +82,15 @@ no obvious sign anything was wrong. Comments belong here, not in that file.
 
 Two things are deliberately absent from the deployment:
 
-- **No bundled fonts.** The font binaries in `data/Fonts/` and
-  `lab/test-fonts/` are gitignored (size and licensing), so the file picker
-  is the only way to load a font on the deployed site. The picker probes
-  each manifest entry before offering it, so it will not advertise a font
-  it cannot load.
+- **Eight bundled fonts, all open-licence.** As of 2026-09-23 the
+  deployment serves an OFL / Apache-2.0 set (Arimo, Tinos, Gelasio,
+  Cousine, Comic Neue, Caveat, Shadows Into Light, Dancing Script) chosen
+  to reproduce the range of skeleton behaviour the pipeline needs to be
+  tested against. See `lab/test-fonts/LICENSES.md` for each one's licence
+  and upstream source. Every other font binary stays gitignored:
+  proprietary faces copied in locally still appear in the dropdown marked
+  `[local only]` and are not deployed. The picker HEAD-probes each entry
+  before offering it, so it never advertises a font it cannot load.
 - **`/api/fonts` does not exist.** It is an endpoint of the local
   `scripts/active/serve.py` only.
 
@@ -101,13 +105,27 @@ function) and set, in that Vercel project's own environment variables:
 |---|---|
 | `GITHUB_TOKEN` | Fine-grained PAT with contents read+write on this repo. Value is in `keyps.txt` under the `GOTHOT` label. |
 | `DEV_PANEL_SAVE_SECRET` | Shared token gating *use of* the above. Also in `keyps.txt`. |
-| `GITHUB_REPO` | `owner/repo`. No default — the endpoint refuses to run without it rather than guessing. |
+| `GITHUB_REPO` | `owner/repo`. **Optional since 2026-09-23** — falls back to Vercel's own `VERCEL_GIT_REPO_OWNER`/`VERCEL_GIT_REPO_SLUG`, the deployment's real git origin. Set it only to write settings into a *different* repo from the one deployed. |
 | `GITHUB_BRANCH` | Optional, defaults to `main`. |
 | `SETTINGS_FILE_PATH` | Optional, defaults to `data/processed/dev-panel-settings.json`. |
 
-Then set `DEV_PANEL_SAVE_SECRET` in `src/main.js` to the same value. Neither
-secret's value ever belongs in a committed file. Until that is done, Save
-writes to `localStorage` only — which is a supported mode, not a failure.
+Then give each browser the same secret **once**, from the console on the
+deployed page:
+
+```
+fontLab.setSaveSecret('<the DEV_PANEL_SAVE_SECRET value>')
+```
+
+It is stored per-device in `localStorage`, never in a committed file. This
+is deliberate: `lab/src/app.mjs` is served to every visitor and lives in a
+public repo, so a hardcoded constant there would be readable by anyone and
+would only *look* like a secret. Check with `fontLab.hasSaveSecret()` and
+clear with `fontLab.setSaveSecret(null)`.
+
+Until that is done, Save writes to `localStorage` only — a supported mode,
+not a failure. A save attempt without the secret returns `401
+Unauthorized`; a `500 Server not configured` means a Vercel environment
+variable is missing instead, and the message names which.
 
 ## Known limitations
 

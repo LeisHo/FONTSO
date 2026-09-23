@@ -26,6 +26,17 @@ datalog/
 lab/test-fonts/*.ttf
 lab/test-fonts/*.otf
 lab/test-fonts/*.woff
+# ...except the bundled OFL / Apache-2.0 set, which IS redistributable and
+# IS committed so the dropdown works on the deployment. See
+# lab/test-fonts/LICENSES.md for each one's licence and upstream source.
+!lab/test-fonts/Arimo-Regular.ttf
+!lab/test-fonts/Tinos-Regular.ttf
+!lab/test-fonts/Gelasio-Regular.ttf
+!lab/test-fonts/Cousine-Regular.ttf
+!lab/test-fonts/ComicNeue-Regular.ttf
+!lab/test-fonts/Caveat-Regular.ttf
+!lab/test-fonts/ShadowsIntoLight-Regular.ttf
+!lab/test-fonts/DancingScript-Regular.ttf
 data/Fonts/*.ttf
 data/Fonts/*.TTF
 data/Fonts/*.otf
