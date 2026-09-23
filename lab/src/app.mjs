@@ -28,7 +28,7 @@ import { ViewportController, DEFAULT_VIEWPORT } from './viz/viewport.mjs';
 import { DEFAULT_TWEEN, buildTween, tweenAnimationRoute } from './tween.mjs';
 import {
     applyOrderOverride, flattenOrdered, swapStops, stopNearest,
-    rasterBounds, toLearnedOrder, orderFromLearned, readLearned, writeLearned,
+    rasterBounds, toLearnedOrder, bestLearnedOrder, readLearned, writeLearned,
 } from './routeOrder.mjs';
 import {
     rememberFont, getFont, listFonts, unsavedFonts, markSaved,
@@ -743,10 +743,17 @@ function applyAnimationRoute() {
     // point of storing them.
     if (!state.routeOrderOverride && route.stops && state.text && state.text.length === 1) {
         const box = rasterBounds(r);
-        const anchors = readLearned(state.learnedOrders, state.fontInfo, state.text);
-        if (anchors && box) {
-            const res = orderFromLearned(route.stops, anchors, box);
-            state.learnedMatch = { matched: res.matched, total: res.total };
+        const variants = readLearned(state.learnedOrders, state.fontInfo, state.text);
+        if (variants && box) {
+            // Every order ever taught for this character is considered;
+            // the one that explains the most of THIS route wins. A serif
+            // variant is therefore still useful on a serif-less run.
+            const res = bestLearnedOrder(route.stops, variants, box);
+            state.learnedMatch = {
+                matched: res.matched, total: res.total,
+                variantCount: res.variantCount, chosen: res.chosen,
+                chosenAnchorCount: res.chosenAnchorCount,
+            };
             if (res.ids && res.matched > 0) {
                 // Rebuilt rather than renumbered. Renumbering the labels
                 // without re-flattening would show a new order while the

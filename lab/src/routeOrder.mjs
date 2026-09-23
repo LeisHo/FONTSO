@@ -29,13 +29,33 @@
 // per-font, per-character data, and a different font's 'H' legitimately
 // has different anchors.
 //
-// WHAT THIS CANNOT DO, stated plainly because it will happen. If a
-// settings change alters the skeleton's TOPOLOGY - a serif branch
-// appearing under a lower prune threshold, a junction splitting in two -
-// then some new stops have no counterpart in the saved order. Those are
-// left in their computed position rather than forced somewhere by a bad
-// match, and the match count is reported so a partial match is visible
-// rather than silent.
+// TOPOLOGY CHANGES AND WHY SEVERAL VARIANTS ARE KEPT. If a settings
+// change alters the skeleton's topology - a serif branch appearing under
+// a lower prune threshold, a junction splitting in two - the stop count
+// itself changes. Matching already handles that in one direction: a
+// RICHER saved order still orders a SPARSER route correctly, because
+// anchors with no stop near them are simply skipped, and stops with no
+// anchor keep their computed position rather than being forced somewhere
+// by a bad match.
+//
+// What that does not survive is OVERWRITING. With one saved order per
+// font+character, teaching the serif variant and then teaching the plain
+// one destroys the serif knowledge, and vice versa - even though each is
+// the better guide for its own topology and the richer one is a
+// perfectly good guide for both.
+//
+// So a character keeps a LIST of recorded orders, and the one that best
+// fits the route in front of us is used: the highest proportion of the
+// current route's stops matched, ties broken by recency. Not merged into
+// a single canonical sequence - merging two orderings needs a topological
+// merge, and it is genuinely ambiguous the moment two saved orders
+// disagree about the relative order of a pair they share. Picking the
+// best-fitting whole order has no such ambiguity and is explainable:
+// "this is the order you taught me for a shape like this one".
+//
+// A variant whose anchors are effectively the same as an existing one
+// REPLACES it rather than accumulating a near-duplicate, so re-teaching
+// the same topology does not grow the list without bound.
 // ====================================================================
 
 // A stop further than this from its nearest saved anchor is treated as
@@ -193,6 +213,37 @@ export function orderFromLearned(stops, anchors, box) {
     return { ids, matched: bySlot.size, total: stops.length };
 }
 
+// Pick the recorded order that best fits the route in front of us.
+//
+// Scored on the proportion of the CURRENT route's stops that matched,
+// not on raw match count: a variant with more anchors would otherwise
+// win automatically, when what actually matters is how much of this
+// route it can explain. Ties go to the most recently taught, which is
+// the closest thing to an expression of current intent.
+export function bestLearnedOrder(stops, variants, box) {
+    if (!box || !Array.isArray(variants) || !variants.length || !stops.length) {
+        return { ids: null, matched: 0, total: stops.length, variantCount: 0, chosen: -1 };
+    }
+    let best = null;
+    for (let i = 0; i < variants.length; i++) {
+        const v = variants[i];
+        const res = orderFromLearned(stops, v.anchors, box);
+        const score = res.total ? res.matched / res.total : 0;
+        const savedAt = v.savedAt || 0;
+        if (!best || score > best.score || (score === best.score && savedAt > best.savedAt)) {
+            best = { score, savedAt, res, index: i, anchorCount: v.anchors.length };
+        }
+    }
+    return {
+        ids: best.res.ids,
+        matched: best.res.matched,
+        total: best.res.total,
+        variantCount: variants.length,
+        chosen: best.index,
+        chosenAnchorCount: best.anchorCount,
+    };
+}
+
 // ---- Store ----------------------------------------------------------
 
 // Keyed by the font's PostScript name plus the character, so the same
@@ -204,14 +255,52 @@ export function learnedKey(fontInfo, char) {
     return `${face}\u0000${char}`;
 }
 
+// At most this many recorded orders per character. Well above the number
+// of distinct topologies a single glyph realistically produces across a
+// settings range, and low enough that the settings document stays small.
+const MAX_VARIANTS = 8;
+
+// Two variants count as the same topology when they have the same number
+// of anchors and every anchor is within this distance of its counterpart.
+// Same units as MATCH_RADIUS; tighter, because this asks "is this the
+// same thing again?" rather than "could this correspond?".
+const SAME_VARIANT_RADIUS = 0.05;
+
+// Old format was a bare anchor array per character. Reading through this
+// means a settings document written before variants existed still loads,
+// without a migration step that could fail halfway.
+function variantsOf(entry) {
+    if (!entry) return [];
+    if (Array.isArray(entry) && entry.length && entry[0] && typeof entry[0].x === 'number') {
+        return [{ anchors: entry, savedAt: 0 }];
+    }
+    if (Array.isArray(entry)) return entry.filter((v) => v && Array.isArray(v.anchors));
+    return [];
+}
+
 export function readLearned(store, fontInfo, char) {
     if (!store || !char) return null;
-    return store[learnedKey(fontInfo, char)] || null;
+    const list = variantsOf(store[learnedKey(fontInfo, char)]);
+    return list.length ? list : null;
+}
+
+function sameVariant(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (Math.hypot(a[i].x - b[i].x, a[i].y - b[i].y) > SAME_VARIANT_RADIUS) return false;
+    }
+    return true;
 }
 
 export function writeLearned(store, fontInfo, char, anchors) {
     if (!char || !anchors || !anchors.length) return store;
-    return { ...(store || {}), [learnedKey(fontInfo, char)]: anchors };
+    const key = learnedKey(fontInfo, char);
+    const existing = variantsOf((store || {})[key]);
+    // Re-teaching the same topology replaces that variant instead of
+    // stacking a near-duplicate beside it.
+    const kept = existing.filter((v) => !sameVariant(v.anchors, anchors));
+    const next = [{ anchors, savedAt: Date.now() }, ...kept].slice(0, MAX_VARIANTS);
+    return { ...(store || {}), [key]: next };
 }
 
 // ---- Flattening -----------------------------------------------------

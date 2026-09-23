@@ -1402,6 +1402,53 @@ Verified (live, real browser, Comic Sans 'H', midline route, 5 stops):
   about what a minimum does.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  3:41 AM - 3:44 AM
+
+Direct question about the learned-order design: if an order is taught,
+settings change so a serif appears, a new order is taught and saved -
+does the first get overwritten, does it fall back to computed order
+afterwards, and shouldn't the serif data still inform the serif-less
+path? Followed by: can BOTH orders be saved for one letter in one font?
+
+The answer was split, and half of it was a real flaw.
+
+ALREADY CORRECT: matching never "fell back to computed order" in that
+scenario. Anchors with no nearby stop are skipped and stops with no
+anchor keep their computed position, so a RICHER saved order already
+ordered a SPARSER route correctly. The serif data was usable on a
+serif-less path.
+
+THE FLAW: writeLearned stored ONE order per font+character, so the last
+save won and the other variant was destroyed - even though each is the
+better guide for its own topology.
+
+Fixed. A character now keeps a LIST of recorded orders, and the one that
+best fits the route on screen is used: highest PROPORTION of the current
+route's stops matched (not raw count, or a variant with more anchors
+would win automatically when what matters is how much of THIS route it
+explains), ties broken by recency.
+
+Deliberately NOT merged into one canonical sequence. Merging two
+orderings needs a topological merge and is genuinely ambiguous the
+moment two saved orders disagree about a pair they share. Picking the
+best-fitting whole order has no such ambiguity and is explainable:
+"this is the order you taught me for a shape like this one".
+
+Also: a re-teach whose anchors are effectively identical to an existing
+variant REPLACES it rather than stacking a near-duplicate, capped at 8
+variants per character; and the old bare-array format still reads, as
+one variant, so a settings document written before this change loads
+without a migration step that could fail halfway.
+
+Verified: scripts/active/test-route-order.mjs, kept in the repo because
+this logic is subtle enough to regress silently. 9 checks, all passing,
+including the two that answer the question directly - "BOTH variants
+kept" and "richer variant alone still orders the sparser route" - plus
+the shuffle guard that makes the taught order differ from the computed
+one, so a pass cannot be vacuous. Live re-check in the browser: pipeline
+unaffected, 5 stops on Comic Sans 'H', no console errors.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
