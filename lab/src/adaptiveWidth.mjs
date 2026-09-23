@@ -15,13 +15,18 @@
 //               both edges land on the glyph. Full width = 2d, which is
 //               the local stroke thickness by definition.
 //
-//   'outward' — for a TWEEN curve. That curve has already been pushed
-//               off the centreline toward one side, so it is no longer
-//               equidistant: the outline it is near is the ADJACENT
-//               one. The ribbon therefore grows from the curve outward
-//               only, by d, and the curve itself is the inner edge.
-//               Animate it and the travelled portion paints the glyph
-//               out to its real boundary one stroke-side at a time.
+//   'span'    — for a TWEEN curve. That curve has been pushed off the
+//               centreline toward one side, so it is not equidistant and
+//               d only reaches the NEAR outline. The ribbon therefore
+//               grows outward by d AND inward to the far outline, so one
+//               travelled curve inks the full local stroke width.
+//
+//               It reached outward only until 2026-09-23. That matched
+//               the original "reach the adjacent side" wording, but left
+//               the core between a stroke's left and right curves never
+//               inked - a dark seam down every stroke, widening into
+//               notches at junctions where the two curves diverge. That
+//               seam was what read as "thinner at the transitions".
 //
 // WHY THE OUTWARD DIRECTION COMES FROM THE FIELD GRADIENT, NOT FROM
 // WHICHEVER SIDE THE TWEEN USED. The gradient of a distance field points
@@ -47,6 +52,53 @@ const GRADIENT_FLOOR = 0.35;
 // the same cell and the difference is pure quantisation noise; larger
 // and the gradient stops being local and smears across a junction.
 const GRADIENT_STEP = 0.5;
+
+// How far inward, along -o, the far outline lies.
+//
+// Walking inward from a point on an offset curve, distance-to-outline
+// RISES to a maximum at the medial axis and then FALLS to zero at the
+// far edge. So the far edge is found by walking until the value falls
+// below a small threshold, with no need to know how far the curve was
+// offset in the first place - which matters because a welded curve's
+// vertices came from two different parents and do not share a
+// progression.
+//
+// Capped at MAX_INWARD_STEPS so a sample that starts outside the glyph,
+// where the field is flat zero and the loop would otherwise find no
+// edge, cannot walk away across the canvas.
+const MAX_INWARD_STEPS = 24;
+const EDGE_THRESHOLD = 0.75;
+
+function inwardReach(field, width, height, x, y, ox, oy, step) {
+    const h = Math.max(0.5, step);
+    let travelled = 0;
+    let rising = false;
+    let prevT = 0;
+    let prevD = sampleDistance(field, width, height, x, y);
+    for (let i = 1; i <= MAX_INWARD_STEPS; i++) {
+        const t = i * h;
+        const d = sampleDistance(field, width, height, x - ox * t, y - oy * t);
+        if (d > EDGE_THRESHOLD) rising = true;
+        // Only stop on a FALL, and only after the value has been above
+        // the threshold at least once: starting near an outline means
+        // the first samples are legitimately small, and stopping there
+        // would return a ribbon of nearly no width.
+        if (rising && d <= EDGE_THRESHOLD) {
+            // INTERPOLATE to the crossing rather than returning t. The
+            // fall is detected one whole step past the edge, so taking t
+            // as the answer overshoots the outline by up to `h` at every
+            // point - measured as 10.4% of the glyph's area spilling
+            // outside it, against 3% before this mode existed.
+            const span = prevD - d;
+            const frac = span > 1e-6 ? (prevD - EDGE_THRESHOLD) / span : 1;
+            return prevT + h * Math.max(0, Math.min(1, frac));
+        }
+        prevT = t;
+        prevD = d;
+        travelled = t;
+    }
+    return travelled;
+}
 
 export function sampleHalfWidths(pts, field, width, height, smoothing = 2) {
     const raw = pts.map((p) => sampleDistance(field, width, height, p.x, p.y));
@@ -90,17 +142,51 @@ export function buildRibbon(pts, field, width, height, options = {}) {
 
     const outer = [];
     const inner = [];
+    const spanning = mode === 'span';
+
+    // The outward unit vector at each point, reused below rather than
+    // recomputed: it costs four field samples each time.
+    const outs = (spanning || mode === 'outward')
+        ? pts.map((p, i) => outwardAt(field, width, height, p.x, p.y) || normals[i])
+        : null;
+
+    // Inward reaches are SMOOTHED, like the half-widths above and for the
+    // same reason. Each is found by an independent march, so neighbouring
+    // points can land a pixel or two apart and the inner edge comes out
+    // visibly ragged - which is exactly what this mode introduced when it
+    // was first written without this pass.
+    let backs = null;
+    if (spanning) {
+        const raw = pts.map((p, i) => {
+            const d = Math.max(minHalfPx, halves[i] * scale);
+            return Math.max(d, inwardReach(field, width, height, p.x, p.y, outs[i].x, outs[i].y, Math.max(1, d / 2)));
+        });
+        const smoothed = smoothScalars(raw, smoothing);
+        // Smoothing may only SHORTEN a reach, never lengthen it. A plain
+        // average overshoots wherever the true reach changes sharply -
+        // around a junction - and pushes the inner edge outside the
+        // glyph. Measured: plain smoothing took spill from 3.8% of the
+        // glyph's area to 8.4% and IoU from 0.859 down to 0.824, so it
+        // bought a tidier edge by making the shape less correct.
+        // Clamping keeps the jitter reduction without the overshoot.
+        backs = raw.map((v, i) => Math.min(v, smoothed[i]));
+    }
 
     for (let i = 0; i < pts.length; i++) {
         const p = pts[i];
         const d = Math.max(minHalfPx, halves[i] * scale);
 
-        if (mode === 'outward') {
-            const o = outwardAt(field, width, height, p.x, p.y) || normals[i];
+        if (outs) {
+            const o = outs[i];
             outer.push({ x: p.x + o.x * d, y: p.y + o.y * d });
-            // The path is its own inner edge: the ribbon reaches the
-            // adjacent side only, which is the whole point of this mode.
-            inner.push({ x: p.x, y: p.y });
+            if (!spanning) {
+                // Legacy reach-one-side behaviour, kept so the mode can
+                // be asked for explicitly; nothing selects it by default.
+                inner.push({ x: p.x, y: p.y });
+            } else {
+                const back = backs[i];
+                inner.push({ x: p.x - o.x * back, y: p.y - o.y * back });
+            }
         } else {
             const n = normals[i];
             outer.push({ x: p.x + n.x * d, y: p.y + n.y * d });

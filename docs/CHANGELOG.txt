@@ -1581,6 +1581,52 @@ before the cause was found by simply rendering the state and looking at
 it. The screenshot answered in seconds what the sampling could not.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  4:19 AM - 4:29 AM
+
+Chosen from the options put back after the previous entry's diagnosis: a
+tween ribbon should reach across the WHOLE stroke, not the adjacent side
+only, so one travelled curve inks the full local width.
+
+Implemented as a new 'span' mode in adaptiveWidth.mjs. Outward by d to
+the near outline as before, and inward to the FAR outline found by
+marching: walking inward from a point on an offset curve, distance-to-
+outline rises to a maximum at the medial axis and then falls to zero at
+the far edge, so the edge is where the value falls back through a small
+threshold. Deliberately not derived from the tween's progression, which
+would be arithmetic on t and would be wrong for a WELDED curve whose
+vertices came from two different parents and share no single t.
+
+'outward' is kept and still works; nothing selects it by default.
+
+Three measured iterations, each fixing what the previous one introduced.
+Coverage is the fraction of the real glyph mask the inked path fills;
+spill is ink outside it, as a fraction of glyph area:
+
+  outward (before)         42.6% covered ·  3.0% spill · IoU 0.413
+  span, naive march        89.5% covered · 10.4% spill · IoU 0.810
+  span + interpolation     89.2% covered ·  3.8% spill · IoU 0.859
+  span + clamped smoothing 89.1% covered ·  3.6% spill · IoU 0.860
+
+- The naive march detects the fall one whole step PAST the edge, so
+  every point overshot by up to one step: 10.4% of the glyph's area
+  spilling outside it. Fixed by interpolating to the threshold crossing
+  between the last two samples.
+- Each reach is an independent march, so neighbouring points landed a
+  pixel or two apart and the inner edge came out visibly ragged. Plain
+  smoothing fixed the raggedness and made the SHAPE worse - spill back
+  up to 8.4%, IoU down to 0.824 - because an average overshoots wherever
+  the true reach changes sharply, which is exactly what happens around a
+  junction. Smoothing is now CLAMPED so it may only shorten a reach,
+  never lengthen it, which keeps the jitter reduction without the
+  overshoot and is the best of the three by IoU.
+
+For reference, midline 'both' mode measures 87.0% covered / 1.4% spill /
+IoU 0.858 on the same glyph, so span is now equivalent in quality.
+
+Remaining, unchanged and already documented: the dark caps at stroke
+terminals are the thinning erosion on the Limitations list, not this.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

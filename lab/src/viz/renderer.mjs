@@ -427,12 +427,13 @@ export class Renderer {
         return !!(r && r.distanceField && r.raster && r.raster.width && r.raster.height);
     }
 
-    // Which side the ribbon grows toward. The MIDLINE is equidistant from
-    // both outlines, so it always grows both ways — including while the
-    // dot is walking a tween curve. A TWEEN curve has already been pushed
-    // toward one outline, so it grows only to that adjacent side.
+    // How wide the ribbon grows. The MIDLINE is equidistant from both
+    // outlines, so ±d covers the stroke. A TWEEN curve is off-centre, so
+    // ±d would not: it spans instead, outward by d to the near outline
+    // and inward to the far one, covering the full local stroke width
+    // from a single curve.
     trailMode() {
-        return this.animationPath === 'tween' ? 'outward' : 'both';
+        return this.animationPath === 'tween' ? 'span' : 'both';
     }
 
     // The polylines the adaptive ink is painted along, matching whatever
@@ -442,8 +443,8 @@ export class Renderer {
         if (this.animationPath === 'tween' && this.tween && this.tween.curves) {
             const out = [];
             for (const c of this.tween.curves) {
-                if (c.left && c.left.length > 1) out.push({ pts: c.left, closed: !!c.isLoop, mode: 'outward' });
-                if (c.right && c.right.length > 1) out.push({ pts: c.right, closed: !!c.isLoop, mode: 'outward' });
+                if (c.left && c.left.length > 1) out.push({ pts: c.left, closed: !!c.isLoop, mode: 'span' });
+                if (c.right && c.right.length > 1) out.push({ pts: c.right, closed: !!c.isLoop, mode: 'span' });
             }
             if (out.length) return out;
         }
