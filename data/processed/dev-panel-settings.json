@@ -1,5 +1,18 @@
 {
-  "importedFonts": [],
+  "importedFonts": [
+    {
+      "key": "ComicNeue-Regular",
+      "fileName": "ComicNeue-Regular.ttf",
+      "size": 57248,
+      "path": "data/processed/fonts/ComicNeue-Regular.ttf"
+    },
+    {
+      "key": "DancingScript-Regular",
+      "fileName": "DancingScript-Regular.ttf",
+      "size": 133636,
+      "path": "data/processed/fonts/DancingScript-Regular.ttf"
+    }
+  ],
   "devPanel": {
     "controls": {
       "sliderRasterEmHeight": 256,
@@ -1635,6 +1648,10 @@
             },
             {
               "type": "row",
+              "key": "__row1"
+            },
+            {
+              "type": "row",
               "key": "selectAnimationPath"
             },
             {
@@ -1648,19 +1665,15 @@
             {
               "type": "row",
               "key": "sliderAnimScrub"
-            },
-            {
-              "type": "row",
-              "key": "__row5"
             }
           ],
           "rowKeys": [
             "__row0",
+            "__row1",
             "selectAnimationPath",
             "checkboxAnimLoop",
             "sliderAnimSpeed",
-            "sliderAnimScrub",
-            "__row5"
+            "sliderAnimScrub"
           ],
           "subgroups": []
         },
@@ -3225,7 +3238,23 @@
       "landscape:Rasterisation": null,
       "landscape:Skeletonisation": null,
       "landscape:Cleanup": null,
-      "landscape:Traversal": null
+      "landscape:Traversal": null,
+      "mobile:MECHANICS": null,
+      "mobile:PANEL UI": null,
+      "mobile:Dev Panel Title": null,
+      "mobile:Group Title": null,
+      "mobile:Setting Title": null,
+      "mobile:TABS": null,
+      "mobile:BUTTONS": null,
+      "mobile:TEXT": null,
+      "landscape:MECHANICS": null,
+      "landscape:PANEL UI": null,
+      "landscape:Dev Panel Title": null,
+      "landscape:Group Title": null,
+      "landscape:Setting Title": null,
+      "landscape:TABS": null,
+      "landscape:BUTTONS": null,
+      "landscape:TEXT": null
     },
     "devTextOverridesManual": [],
     "lockedGroups": [],
