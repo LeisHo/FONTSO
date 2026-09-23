@@ -205,12 +205,21 @@ export function buildTraversal(vector, config) {
             // stops themselves.
             stops: resampled
                 .filter((sg) => sg.kind === 'draw')
-                .map((sg, i) => ({
-                    id: `seg:${sg.edgeId ?? i}:${i}`,
-                    order: i + 1,
-                    point: { x: sg.pointsPx[0].x, y: sg.pointsPx[0].y },
-                    letter: sg.letterIndex ?? null,
-                })),
+                .map((sg, i) => {
+                    const last = sg.pointsPx[sg.pointsPx.length - 1];
+                    return {
+                        id: `seg:${sg.edgeId ?? i}:${i}`,
+                        order: i + 1,
+                        point: { x: sg.pointsPx[0].x, y: sg.pointsPx[0].y },
+                        // Where the pen LIFTS, same shape buildStops()
+                        // emits for the tween route - the two stop lists
+                        // have to be interchangeable or the Route Point
+                        // layer would show end markers on one path and
+                        // not the other.
+                        exit: { x: last.x, y: last.y },
+                        letter: sg.letterIndex ?? null,
+                    };
+                }),
         },
         stats: {
             drawCount: drawSegments.length,

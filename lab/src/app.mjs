@@ -1198,7 +1198,7 @@ window.renderFontLabDevGroups = function renderFontLabDevGroups() {
 // Bumped alongside the ?v= query on the script tags, so "what build is
 // that tab running?" is answerable in one line instead of inferred from
 // behaviour.
-const BUILD = 22;
+const BUILD = 23;
 
 const SETTINGS_ENDPOINT = '/api/save-settings';
 const FONT_DIR = 'data/processed/fonts/';

@@ -562,20 +562,58 @@ export class Renderer {
     // Pen-up moves, dashed so they are unmistakably not part of the
     // glyph. These are the hooks a future traversal planner turns into
     // real U-turns and travel moves.
+    // Pen-up moves for the route the animation is ACTUALLY following.
+    //
+    // Derived from the live route rather than result.traversal, which is
+    // always the midline traversal: with the Animation Path set to Tween
+    // the dot crosses completely different gaps, so drawing the midline's
+    // connectors showed pen-up lines that did not correspond to anything
+    // the dot was doing. Falls back to the traversal only when no route
+    // has been set yet.
     drawConnectors() {
-        const r = this.result;
-        if (!r.traversal) return;
+        const runs = this.connectorRuns();
+        if (!runs.length) return;
         const { ctx } = this;
         ctx.save();
         ctx.strokeStyle = LAYER_COLORS.connector;
         ctx.lineWidth = 1.25;
         ctx.setLineDash([4, 4]);
-        for (const seg of r.traversal.segments) {
-            if (seg.kind !== 'connector') continue;
-            this.strokePolyline(seg.pointsPx);
-        }
+        for (const run of runs) this.strokePolyline(run);
         ctx.setLineDash([]);
         ctx.restore();
+    }
+
+    // Every pen-up move in the current route, as its own polyline.
+    //
+    // The two route builders mark connectors differently and this handles
+    // both without caring which produced the route: the midline emits a
+    // RUN of connector points (its connector segments are real geometry),
+    // while the tween emits a SINGLE connector point at the start of each
+    // run. Bridging to the drawn point on either side of a connector run
+    // turns both into the same thing - a line from where the pen lifted
+    // to where it landed.
+    connectorRuns() {
+        const flat = this.route && this.route.flat;
+        if (!flat || !flat.length) {
+            const r = this.result;
+            if (!r || !r.traversal) return [];
+            return r.traversal.segments
+                .filter((seg) => seg.kind === 'connector')
+                .map((seg) => seg.pointsPx);
+        }
+        const runs = [];
+        let i = 0;
+        while (i < flat.length) {
+            if (flat[i].kind !== 'connector') { i++; continue; }
+            const start = i;
+            while (i < flat.length && flat[i].kind === 'connector') i++;
+            const run = [];
+            if (start > 0) run.push(flat[start - 1].p);
+            for (let k = start; k < i; k++) run.push(flat[k].p);
+            if (i < flat.length) run.push(flat[i].p);
+            if (run.length > 1) runs.push(run);
+        }
+        return runs;
     }
 
     drawNodes() {
@@ -638,14 +676,33 @@ export class Renderer {
         const { ctx } = this;
         ctx.save();
         for (const st of stops) {
-            const p = this.toScreen(st.point.x, st.point.y);
             const selected = this.pendingStopId === String(st.id);
+            const colour = selected ? '#ffd166' : LAYER_COLORS.routePoint;
+            const ring = selected ? '#ff7b00' : 'rgba(0,0,0,0.65)';
+
+            // ENTRY: filled. Where the pen lands.
+            const a = this.toScreen(st.point.x, st.point.y);
             ctx.beginPath();
-            ctx.arc(p.x, p.y, selected ? 8 : 5.5, 0, Math.PI * 2);
-            ctx.fillStyle = selected ? '#ffd166' : LAYER_COLORS.routePoint;
+            ctx.arc(a.x, a.y, selected ? 8 : 5.5, 0, Math.PI * 2);
+            ctx.fillStyle = colour;
             ctx.fill();
             ctx.lineWidth = selected ? 2.5 : 1.25;
-            ctx.strokeStyle = selected ? '#ff7b00' : 'rgba(0,0,0,0.65)';
+            ctx.strokeStyle = ring;
+            ctx.stroke();
+
+            // EXIT: hollow, same colour. Where the pen lifts. Drawn only
+            // when it is far enough from the entry to be a separate
+            // marker - on a closed loop the two coincide, and stacking a
+            // ring on the disc there would just look like a halo.
+            if (!st.exit) continue;
+            const b = this.toScreen(st.exit.x, st.exit.y);
+            if (Math.hypot(b.x - a.x, b.y - a.y) < 6) continue;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, selected ? 7.5 : 5, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(12,16,22,0.85)';
+            ctx.fill();
+            ctx.lineWidth = selected ? 2.5 : 2;
+            ctx.strokeStyle = colour;
             ctx.stroke();
         }
         ctx.restore();
@@ -661,19 +718,31 @@ export class Renderer {
         ctx.font = 'bold 11px ui-monospace, Consolas, monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        for (const st of stops) {
-            const p = this.toScreen(st.point.x, st.point.y);
-            const x = p.x + 11;
-            const y = p.y - 11;
+        // Both ends carry the SAME number - it identifies the stroke, not
+        // the endpoint. The entry's badge is solid-filled and the exit's
+        // is outlined, matching their markers, so a glance tells you
+        // which end of stroke N you are looking at.
+        const badge = (px, py, text, filled) => {
             ctx.beginPath();
-            ctx.arc(x, y, 9, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(12,16,22,0.88)';
+            ctx.arc(px, py, 9, 0, Math.PI * 2);
+            ctx.fillStyle = filled ? 'rgba(12,16,22,0.88)' : 'rgba(12,16,22,0.6)';
             ctx.fill();
-            ctx.lineWidth = 1;
+            ctx.lineWidth = filled ? 1 : 1.75;
+            ctx.setLineDash(filled ? [] : [3, 2]);
             ctx.strokeStyle = LAYER_COLORS.routePoint;
             ctx.stroke();
-            ctx.fillStyle = '#fff';
-            ctx.fillText(String(st.order), x, y);
+            ctx.setLineDash([]);
+            ctx.fillStyle = filled ? '#fff' : LAYER_COLORS.routePoint;
+            ctx.fillText(text, px, py);
+        };
+
+        for (const st of stops) {
+            const a = this.toScreen(st.point.x, st.point.y);
+            badge(a.x + 11, a.y - 11, String(st.order), true);
+            if (!st.exit) continue;
+            const b = this.toScreen(st.exit.x, st.exit.y);
+            if (Math.hypot(b.x - a.x, b.y - a.y) < 6) continue;
+            badge(b.x + 11, b.y + 11, String(st.order), false);
         }
         ctx.restore();
     }

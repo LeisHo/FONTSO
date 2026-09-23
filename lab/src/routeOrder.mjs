@@ -68,18 +68,33 @@ const MATCH_RADIUS = 0.18;
 
 // ---- Stops ---------------------------------------------------------
 
-// One stop per ordered item: where the pen arrives, and in what order.
+// One stop per ordered item: where the pen ARRIVES, where it LIFTS, and
+// in what order.
+//
+// Both ends are recorded but the pair shares ONE order number, because
+// the number identifies a stroke, not a loose endpoint - Switch Point
+// Order swaps whole curves, and numbering the two ends separately would
+// invite clicking two halves of different strokes and expecting
+// something coherent. The renderer distinguishes them by marker shape
+// instead: filled where the pen lands, hollow where it lifts.
 export function buildStops(ordered) {
     const stops = [];
     for (let i = 0; i < ordered.length; i++) {
         const entry = ordered[i];
-        const run = entry.runs && entry.runs[0];
-        const point = run && run[0];
+        const runs = entry.runs || [];
+        const firstRun = runs[0];
+        const lastRun = runs[runs.length - 1];
+        const point = firstRun && firstRun[0];
         if (!point) continue;
+        // The exit is the last point of the LAST run, not of the first:
+        // an entry whose curve was split into several runs leaves the pen
+        // at the end of the final one.
+        const exit = lastRun && lastRun[lastRun.length - 1];
         stops.push({
             id: entry.id,
             order: stops.length + 1,
             point: { x: point.x, y: point.y },
+            exit: exit ? { x: exit.x, y: exit.y } : { x: point.x, y: point.y },
             letter: entry.letter ?? null,
         });
     }
@@ -123,11 +138,18 @@ export function swapStops(stops, orderA, orderB) {
 // The stop nearest a click, in raster pixels, or null if none is within
 // `radiusPx`. Hit-testing on the raw point rather than a drawn marker
 // keeps this correct at any zoom, since the caller converts first.
+// Considers BOTH ends of every stop: clicking where a stroke finishes
+// selects that stroke just as clicking where it starts does. Without
+// this the hollow exit markers would be visible but dead to the touch,
+// which reads as a broken control rather than a deliberate one.
 export function stopNearest(stops, x, y, radiusPx) {
     let best = null;
     for (const s of stops) {
-        const d = Math.hypot(s.point.x - x, s.point.y - y);
-        if (d <= radiusPx && (!best || d < best.d)) best = { d, stop: s };
+        for (const p of [s.point, s.exit]) {
+            if (!p) continue;
+            const d = Math.hypot(p.x - x, p.y - y);
+            if (d <= radiusPx && (!best || d < best.d)) best = { d, stop: s };
+        }
     }
     return best ? best.stop : null;
 }

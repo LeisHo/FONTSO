@@ -1931,6 +1931,56 @@ and a payload that previously failed as a whole - all committed, across
 two batches. Cleaned up afterwards.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  6:35 AM - 6:43 AM
+
+Two requests: make the pen-up layer react to the chosen animation
+curveset, and number END points as well as start points.
+
+PEN-UP LAYER NOW FOLLOWS THE ROUTE. drawConnectors() read
+result.traversal.segments unconditionally, which is always the MIDLINE
+traversal - so with the Animation Path set to Tween it drew pen-up lines
+for transitions the dot was not making. Connectors are now derived from
+the live route's own flat point stream.
+
+The two builders mark connectors differently and connectorRuns() handles
+both without knowing which produced the route: the midline emits a RUN
+of connector points (its connector segments are real geometry), the
+tween emits a SINGLE connector point at the start of each run. Bridging
+to the drawn point either side of a connector run turns both into the
+same thing - a line from where the pen lifted to where it landed. Falls
+back to the traversal only when no route has been set yet.
+
+END POINTS. Each stop now records where the pen LIFTS as well as where
+it lands. The pair shares ONE order number, deliberately: the number
+identifies a STROKE, not a loose endpoint, and Switch Point Order swaps
+whole curves - numbering the two ends separately would invite clicking
+two halves of different strokes and expecting something coherent. They
+are distinguished by shape instead - filled marker and solid badge for
+the entry, hollow marker and dashed badge for the exit.
+
+An exit closer than 6px to its own entry is not drawn: on a closed loop
+the two coincide and a ring stacked on the disc would just look like a
+halo.
+
+stopNearest() hit-tests BOTH ends, so clicking where a stroke finishes
+selects it exactly as clicking where it starts does. Without that the
+hollow markers would be visible but dead to the touch, which reads as a
+broken control rather than a deliberate one.
+
+Caught in verification: the exit was initially present on the TWEEN
+route only. The midline's stops are built inline in traversal.mjs, which
+buildStops() does not touch, so they carried no exit at all and the
+feature silently worked on one path and not the other - measured as
+0 of 5 midline stops having a distinct exit against 3 of 3 on the tween.
+Both stop lists now emit the same shape.
+
+Verified (live, Comic Sans 'H'):
+- Pen-up geometry genuinely differs by mode: 256.6px total on the
+  midline route against 149.1px on the tween route.
+- Distinct exits: 5 of 5 midline stops, 3 of 3 tween stops.
+- A real PointerEvent on a stop's EXIT marker selects that stop.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
