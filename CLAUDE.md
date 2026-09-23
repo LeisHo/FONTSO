@@ -165,6 +165,21 @@ The two marked "Hit here" were hit in this project and are not theoretical.
   fetch" in the browser instead of the error the server actually sent. It
   only shows up once a POST carries a font, because a small body fits in
   the buffer and a large one does not. (Hit here, 2026-09-23.)
+- **Vercel caps a serverless request body at 4.5MB, enforced BEFORE the
+  function runs.** An oversized POST returns a bare `413` with no JSON
+  body, because `api/save-settings.js` never executes. Base64 inflates
+  fonts by a third, so three ordinary faces exceed it - and since the
+  settings rode in the same request, EVERY save failed, making a
+  whole-pipeline outage look font-specific. Fonts now upload in
+  size-bounded batches with the settings sent separately. A passing test
+  below the limit proves nothing: a 3.2MB stress test succeeded and was
+  wrongly used to rule payload size out. (Hit here, 2026-09-23.)
+- **`putFile` must retry a GitHub 409.** The Contents API needs a file's
+  current blob sha, so the write is read-then-write; any concurrent
+  commit to that path makes the sha stale and the PUT fails with
+  `409 "is at X but expected Y"`. Without a retry that is a permanent
+  failure for an ordinary race (two tabs, two devices, or a batch moving
+  the branch under its own later writes). (Hit here, 2026-09-23.)
 - **`python -m http.server` cannot serve this project** — it sends `.mjs`
   as `text/plain` and every engine import fails. Use `serve.py`.
 - **A local static server in the Claude Code sandbox can intermittently
