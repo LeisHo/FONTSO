@@ -961,7 +961,7 @@ const FONT_DIR = 'data/processed/fonts/';
 // Empty means "no remote writes from this build", which is a supported
 // mode, not a failure: Save falls back to localStorage and everything
 // else works. A save attempted with the wrong value returns 401.
-const DEV_PANEL_SAVE_SECRET = '';
+const DEV_PANEL_SAVE_SECRET = 'PkrbMti03M6xm3FEThYXa8gGW_08BOGj';
 
 async function remoteGetSettings() {
     try {
