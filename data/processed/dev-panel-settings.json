@@ -11,6 +11,12 @@
       "fileName": "DancingScript-Regular.ttf",
       "size": 133636,
       "path": "data/processed/fonts/DancingScript-Regular.ttf"
+    },
+    {
+      "key": "Tinos-Regular",
+      "fileName": "Tinos-Regular.ttf",
+      "size": 521588,
+      "path": "data/processed/fonts/Tinos-Regular.ttf"
     }
   ],
   "devPanel": {
@@ -3383,11 +3389,109 @@
         ],
         "savedAt": 1790152926722
       }
+    ],
+    "Tinos-Regular\u0000A": [
+      {
+        "anchors": [
+          {
+            "x": 0,
+            "y": 1,
+            "letter": null
+          },
+          {
+            "x": 0.1329,
+            "y": 0.9808,
+            "letter": null
+          },
+          {
+            "x": 0.1329,
+            "y": 0.9808,
+            "letter": null
+          },
+          {
+            "x": 0.2543,
+            "y": 0.6026,
+            "letter": null
+          },
+          {
+            "x": 0.6821,
+            "y": 0.5833,
+            "letter": null
+          },
+          {
+            "x": 0.6821,
+            "y": 0.5833,
+            "letter": null
+          },
+          {
+            "x": 0.8092,
+            "y": 0.9487,
+            "letter": null
+          },
+          {
+            "x": 0.8092,
+            "y": 0.9487,
+            "letter": null
+          }
+        ],
+        "savedAt": 1790153661402
+      }
     ]
   },
-  "lastSaveStamp": "1790152926722-a6wx308t",
+  "lastSaveStamp": "1790153661402-l2q0fesa",
   "fontSettings": {
     "Gelasio-Regular": {
+      "memory": {
+        "config": {
+          "rasterEmHeight": 256,
+          "wrapWidthPx": 900,
+          "lineHeightEm": 1.25,
+          "useKerning": true,
+          "letterSpacingUnits": 0,
+          "rasterPadding": 4,
+          "alphaThreshold": 128,
+          "thinningAlgorithm": "zhang-suen",
+          "removeRedundantPixels": true,
+          "maxThinningIterations": 400,
+          "removeIsolatedPixels": true,
+          "minSourceAreaPx": 24,
+          "minBranchLengthPx": 12,
+          "pruneIterations": 3,
+          "mergeAdjacentJunctions": true,
+          "simplifyTolerancePx": 0.8,
+          "smoothingPasses": 1,
+          "smoothingStrength": 0.6,
+          "preserveEndpointsWhileSmoothing": true
+        },
+        "view": {
+          "pathThicknessEnabled": false,
+          "pathThicknessPx": 8,
+          "pathColor": "#31d67a",
+          "progressiveThickness": false,
+          "adaptiveThickness": false,
+          "strokeRoundCap": false
+        },
+        "tween": {
+          "enabled": false,
+          "progression": 0.5,
+          "radiusScale": 1,
+          "radiusSmoothing": 2,
+          "normalSmoothing": 2,
+          "resampleSpacingPx": 2,
+          "extendTerminalsPx": 0,
+          "bothSides": true,
+          "joinIntersections": true,
+          "joinStyle": "auto",
+          "joinSharpAngleDeg": 60,
+          "joinCornerRadiusPx": 4,
+          "joinMiterLimit": 4,
+          "joinProximityPx": 9,
+          "loopSingleCurves": false
+        }
+      },
+      "presets": []
+    },
+    "Tinos-Regular": {
       "memory": {
         "config": {
           "rasterEmHeight": 256,
