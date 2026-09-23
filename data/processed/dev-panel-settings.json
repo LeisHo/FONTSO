@@ -11,6 +11,12 @@
       "fileName": "DancingScript-Regular.ttf",
       "size": 133636,
       "path": "data/processed/fonts/DancingScript-Regular.ttf"
+    },
+    {
+      "key": "BigTest-Arimo",
+      "fileName": "BigTest-Arimo.ttf",
+      "size": 496268,
+      "path": "data/processed/fonts/BigTest-Arimo.ttf"
     }
   ],
   "devPanel": {
@@ -3287,5 +3293,33 @@
       "landscape": {}
     }
   },
-  "learnedOrders": {}
+  "learnedOrders": {
+    "Arimo-Regular\u0000A": [
+      {
+        "anchors": [
+          {
+            "x": 0,
+            "y": 1,
+            "letter": null
+          },
+          {
+            "x": 0.2632,
+            "y": 0.6303,
+            "letter": null
+          },
+          {
+            "x": 0.8421,
+            "y": 0.6303,
+            "letter": null
+          },
+          {
+            "x": 0.8421,
+            "y": 0.6303,
+            "letter": null
+          }
+        ],
+        "savedAt": 1790150088011
+      }
+    ]
+  }
 }
