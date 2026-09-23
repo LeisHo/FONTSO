@@ -194,7 +194,24 @@ export function buildTraversal(vector, config) {
             lengthPx: s.kind === 'draw' ? s.lengthPx : polylineLength(s.pointsPx),
         })),
         decisions,
-        animation: { flat, cumulative, totalLength: cumulative[cumulative.length - 1] || 0 },
+        animation: {
+            flat,
+            cumulative,
+            totalLength: cumulative[cumulative.length - 1] || 0,
+            // Same shape the tween route emits, so the Route Points
+            // layer and Switch Point Order work against either source
+            // without caring which produced it. One stop per DRAWN
+            // segment; connectors are pen-up moves between stops, not
+            // stops themselves.
+            stops: resampled
+                .filter((sg) => sg.kind === 'draw')
+                .map((sg, i) => ({
+                    id: `seg:${sg.edgeId ?? i}:${i}`,
+                    order: i + 1,
+                    point: { x: sg.pointsPx[0].x, y: sg.pointsPx[0].y },
+                    letter: sg.letterIndex ?? null,
+                })),
+        },
         stats: {
             drawCount: drawSegments.length,
             connectorCount: connectors.length,

@@ -221,6 +221,23 @@ GOTCHAS
   than imported. lab/ is meant to be liftable as a geometry engine, and a
   width module that drags the whole welding stage in behind it would
   defeat that. They are a dozen lines each.
+- routeOrder.mjs owns the animation route's ORDER: the stops a user
+  sees and clicks, manual overrides, and the learned per-font+character
+  stroke order. All three turn on one question - what identifies a stop -
+  which is why they live together rather than being spread across the
+  route builders.
+- A learned order is stored as NORMALISED GLYPH-SPACE POSITIONS, never as
+  ids or indices. `edgeId:left` is assigned by the skeleton graph, so any
+  change to raster height, thinning or pruning renumbers everything; a
+  position in the glyph's own bounding box survives all of it. Matching
+  is greedy nearest-pair-first, so one bad early match cannot cascade,
+  and unmatched stops keep their computed position rather than being
+  forced somewhere.
+- Both route builders emit the same `stops` shape, so the Route Points
+  layer and Switch Point Order work against either without branching.
+  The midline route re-flattens through flattenOrdered() when an
+  override applies, because its precomputed animation was flattened in
+  traversal order and cannot express a reorder.
 - routing.mjs keeps "which curve next" and "where do I enter it"
   SEPARATE. Each curve proposes admissible entry points; selection is
   always pen-to-entry travel. Letting an entry rule's own distance

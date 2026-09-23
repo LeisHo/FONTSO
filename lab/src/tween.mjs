@@ -39,6 +39,7 @@
 // ====================================================================
 
 import { sampleDistance } from './distanceTransform.mjs';
+import { applyOrderOverride, buildStops } from './routeOrder.mjs';
 import { routeNearest } from './routing.mjs';
 
 export const DEFAULT_TWEEN = {
@@ -525,6 +526,11 @@ function unit(a, b) {
 export function tweenAnimationRoute(tween, {
     nearestRouting = true, entryMode = 'endpoints', loopAnchors = [],
     rightwardBias = 0, groupByLetter = true, letterOf = null,
+    // An explicit id sequence from a manual reorder or a learned stroke
+    // order. Applied AFTER routing rather than instead of it, so
+    // anything the override does not name still gets a sensible
+    // computed position instead of an arbitrary one.
+    orderOverride = null,
 } = {}) {
     const items = [];
     for (const c of tween.curves) {
@@ -542,9 +548,14 @@ export function tweenAnimationRoute(tween, {
 
     // Two orderings, so the nearest-neighbour result can be compared
     // against the naive one rather than taken on faith.
-    const ordered = nearestRouting
+    let ordered = nearestRouting
         ? routeNearest(items, null, { entryMode, loopAnchors, rightwardBias, groupByLetter })
         : items.map((it) => ({ id: it.id, runs: [it.pts], entryDistance: 0 }));
+    // Carry each item's letter through, so a stop can report which glyph
+    // it belongs to without the caller re-deriving it from the edge id.
+    const letterById = new Map(items.map((it) => [String(it.id), it.letter]));
+    ordered = ordered.map((e) => ({ ...e, letter: letterById.get(String(e.id)) ?? null }));
+    ordered = applyOrderOverride(ordered, orderOverride);
 
     const flat = [];
     let penUpTravel = 0;
@@ -584,6 +595,10 @@ export function tweenAnimationRoute(tween, {
         cumulative,
         totalLength: cumulative[cumulative.length - 1] || 0,
         penUpTravel,
+        // Where the pen arrives for each item, in visit order. This is
+        // what the Route Points layer draws and what Switch Point Order
+        // edits; see routeOrder.mjs.
+        stops: buildStops(ordered),
         curveCount: items.length,
         runCount: ordered.reduce((n, e) => n + e.runs.length, 0),
         // Which rule placed each entry, so the debug data shows whether

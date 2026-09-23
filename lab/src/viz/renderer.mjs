@@ -16,6 +16,7 @@
 import { buildRibbon } from '../adaptiveWidth.mjs';
 
 export const LAYER_COLORS = {
+    routePoint: '#4fc3f7',
     glyphFill: 'rgba(120, 130, 150, 0.22)',
     glyphOutline: 'rgba(150, 165, 195, 0.85)',
     mask: 'rgba(70, 95, 135, 0.45)',
@@ -51,6 +52,9 @@ export const DEFAULT_VIEW = {
     // Width comes from the glyph's own distance field instead of the
     // Path Thickness slider. See adaptiveWidth.mjs for the two modes.
     adaptiveThickness: false,
+    // How a drawn stroke ends where it meets a pen-up move: flat (off)
+    // or rounded by the stroke's own half-width (on).
+    strokeRoundCap: false,
 };
 
 export const DEFAULT_LAYERS = {
@@ -64,6 +68,12 @@ export const DEFAULT_LAYERS = {
     traversal: false,
     connectors: true,
     order: false,
+    // The ANIMATION route's stops - where the pen arrives for each
+    // curve, in visit order. Distinct from `traversal`/`order` above,
+    // which describe the midline traversal's segments regardless of
+    // which route the animation is actually following.
+    routePoints: false,
+    routeOrder: false,
     dot: true,
     tween: true,
 };
@@ -86,8 +96,27 @@ export class Renderer {
         // host so the renderer never has to guess which path the dot is
         // actually walking.
         this.animationPath = 'midline';
+        // The live animation route, held so the Route Points layer draws
+        // the same stops the animator is actually walking rather than a
+        // separately recomputed guess.
+        this.route = null;
+        // Switch Point Order mode: the first stop clicked, awaiting a
+        // second. Purely transient UI state - never saved.
+        this.pendingStopId = null;
         // Owned by the viewport controller; see setResult().
         this.autoFit = true;
+    }
+
+    setRoute(route) {
+        this.route = route || null;
+    }
+
+    setPendingStop(id) {
+        this.pendingStopId = id == null ? null : String(id);
+    }
+
+    stops() {
+        return (this.route && this.route.stops) || [];
     }
 
     setAnimationPath(kind) {
@@ -194,6 +223,10 @@ export class Renderer {
         if (this.layers.connectors) this.drawConnectors();
         if (this.layers.nodes) this.drawNodes();
         if (this.layers.order) this.drawOrderLabels();
+        // Above the geometry: these are clickable targets in Switch
+        // Point Order mode, so they must never be hidden under a stroke.
+        if (this.layers.routePoints) this.drawRoutePoints();
+        if (this.layers.routeOrder) this.drawRouteOrderLabels();
         if (this.layers.dot) this.drawDot();
     }
 
@@ -359,6 +392,7 @@ export class Renderer {
                 this.fillAdaptiveRibbon(this.trail, { closed: false, mode: this.trailMode() });
             } else {
                 ctx.strokeStyle = v.pathColor;
+                ctx.lineCap = v.strokeRoundCap ? 'round' : 'butt';
                 ctx.lineWidth = Math.max(1, v.pathThicknessPx * this.view.scale);
                 this.strokePolyline(this.trail);
             }
@@ -405,9 +439,14 @@ export class Renderer {
         const ribbon = buildRibbon(pts, r.distanceField, r.raster.width, r.raster.height, {
             mode,
             closed,
-            // Half a raster pixel, so a hairline stroke never vanishes
-            // where the distance field rounds to zero at a terminal.
-            minHalfPx: 0.5,
+            // Never thinner than the Path Thickness slider. Adaptive
+            // width is a FLOOR-PLUS-GLYPH rule, not a pure glyph rule:
+            // the distance field goes to zero at every terminal and
+            // pinches at thin joins, so without a floor the stroke
+            // vanishes exactly where the eye expects a stroke end. The
+            // slider stays meaningful with adaptive on - it sets the
+            // minimum rather than the width.
+            minHalfPx: Math.max(0.5, (this.viewSettings.pathThicknessPx || 0) / 2),
         });
         if (!ribbon) return;
         const { ctx } = this;
@@ -418,10 +457,39 @@ export class Renderer {
             this.tracePolygon(ribbon.outer, true);
             this.tracePolygon(ribbon.inner, true);
             ctx.fill('evenodd');
+        } else if (this.viewSettings.strokeRoundCap) {
+            // Round cap: the ribbon's end is a straight edge between its
+            // outer and inner boundary, so a cap is a half-disc centred
+            // on the path with that edge as its diameter. Drawn as
+            // separate arcs on the same path so the fill merges them
+            // with the body rather than seaming.
+            const o = ribbon.outer;
+            const n = ribbon.inner;
+            this.tracePolygon(o.concat(n.slice().reverse()), true);
+            this.traceEndCap(o[o.length - 1], n[n.length - 1]);
+            this.traceEndCap(n[0], o[0]);
+            ctx.fill();
         } else {
             this.tracePolygon(ribbon.outer.concat(ribbon.inner.slice().reverse()), true);
             ctx.fill();
         }
+    }
+
+    // A half-disc spanning a-to-b, bulging away from the path. Added as
+    // its own sub-path; the caller fills everything at once.
+    traceEndCap(a, b) {
+        if (!a || !b) return;
+        const { ctx } = this;
+        const sa = this.toScreen(a.x, a.y);
+        const sb = this.toScreen(b.x, b.y);
+        const cx = (sa.x + sb.x) / 2;
+        const cy = (sa.y + sb.y) / 2;
+        const rr = Math.hypot(sb.x - sa.x, sb.y - sa.y) / 2;
+        if (!(rr > 0.25)) return;
+        const ang = Math.atan2(sb.y - sa.y, sb.x - sa.x);
+        ctx.moveTo(sa.x, sa.y);
+        ctx.arc(cx, cy, rr, ang, ang + Math.PI);
+        ctx.closePath();
     }
 
     tracePolygon(points, closePath) {
@@ -536,6 +604,56 @@ export class Renderer {
             ctx.fill();
             ctx.fillStyle = '#fff';
             ctx.fillText(String(n), s.x, s.y);
+        }
+        ctx.restore();
+    }
+
+    // Animation route stops. A stop selected as the first half of a swap
+    // is drawn distinctly - without that, a click that registered and a
+    // click that missed look identical, which makes the mode feel broken
+    // whenever a click lands just outside a marker.
+    drawRoutePoints() {
+        const stops = this.stops();
+        if (!stops.length) return;
+        const { ctx } = this;
+        ctx.save();
+        for (const st of stops) {
+            const p = this.toScreen(st.point.x, st.point.y);
+            const selected = this.pendingStopId === String(st.id);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, selected ? 8 : 5.5, 0, Math.PI * 2);
+            ctx.fillStyle = selected ? '#ffd166' : LAYER_COLORS.routePoint;
+            ctx.fill();
+            ctx.lineWidth = selected ? 2.5 : 1.25;
+            ctx.strokeStyle = selected ? '#ff7b00' : 'rgba(0,0,0,0.65)';
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // The visit number, offset off the marker so it never covers the
+    // thing being clicked.
+    drawRouteOrderLabels() {
+        const stops = this.stops();
+        if (!stops.length) return;
+        const { ctx } = this;
+        ctx.save();
+        ctx.font = 'bold 11px ui-monospace, Consolas, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (const st of stops) {
+            const p = this.toScreen(st.point.x, st.point.y);
+            const x = p.x + 11;
+            const y = p.y - 11;
+            ctx.beginPath();
+            ctx.arc(x, y, 9, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(12,16,22,0.88)';
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = LAYER_COLORS.routePoint;
+            ctx.stroke();
+            ctx.fillStyle = '#fff';
+            ctx.fillText(String(st.order), x, y);
         }
         ctx.restore();
     }

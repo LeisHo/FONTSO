@@ -27,6 +27,10 @@ import { PathAnimator } from './viz/animator.mjs';
 import { ViewportController, DEFAULT_VIEWPORT } from './viz/viewport.mjs';
 import { DEFAULT_TWEEN, buildTween, tweenAnimationRoute } from './tween.mjs';
 import {
+    applyOrderOverride, flattenOrdered, swapStops, stopNearest,
+    rasterBounds, toLearnedOrder, orderFromLearned, readLearned, writeLearned,
+} from './routeOrder.mjs';
+import {
     rememberFont, getFont, listFonts, unsavedFonts, markSaved,
     bytesToBase64, base64ToBytes, adoptSavedFont, keyForFileName,
 } from './fontStore.mjs';
@@ -48,6 +52,17 @@ const state = {
     tween: { ...DEFAULT_TWEEN },
     // 'midline' | 'tween' - which geometry the animated dot follows.
     animationPath: 'midline',
+    // Manual stroke-order edits for the CURRENT geometry, as an explicit
+    // id sequence. Cleared whenever the text or font changes, because
+    // the ids belong to that run's skeleton. What survives a change is
+    // `learnedOrders` below, which is keyed on position instead.
+    routeOrderOverride: null,
+    // Whether a canvas click swaps two route points instead of panning.
+    switchPointOrderMode: false,
+    // font+character -> ordered normalised anchors. Persisted by Sync.
+    learnedOrders: {},
+    // Result of the last learned-order match, for the status line.
+    learnedMatch: null,
     // The string to render. A single character is just the one-character
     // case; the pipeline does not distinguish them.
     text: 'A',
@@ -61,6 +76,12 @@ const renderer = new Renderer(canvas);
 // transform and asks for a redraw. See viewport.mjs for the gesture map
 // and why zoom is anchored to the pointer.
 const viewport = new ViewportController(canvas, renderer, () => renderer.draw());
+
+// CAPTURING, and on pointerdown rather than click: the viewport
+// controller starts a pan on pointerdown, so a listener that waited for
+// click would fire only after a pan had already begun and moved the
+// view out from under the cursor.
+canvas.addEventListener('pointerdown', (e) => onCanvasClickForSwitch(e), true);
 const animator = new PathAnimator(onAnimationFrame);
 
 // Elements created inside dev-panel groups; populated by the builders.
@@ -114,6 +135,8 @@ const LAYER_LABELS = {
     traversal: 'Traversal Route',
     connectors: 'Connectors (Pen-Up)',
     order: 'Segment Order Numbers',
+    routePoints: 'Animation Route Points',
+    routeOrder: 'Route Point Order Numbers',
     dot: 'Animated Dot',
     tween: 'Tween Curves',
 };
@@ -297,6 +320,15 @@ function buildAnimationGroup() {
             animator.toggle();
             ui.playBtn.textContent = animator.playing ? 'Pause' : 'Play';
         });
+        ui.switchOrderBtn = document.createElement('button');
+        ui.switchOrderBtn.textContent = 'Switch Point Order';
+        // A MODE, not an action: it stays on until clicked again, so a
+        // run of swaps does not need the button re-armed each time.
+        ui.switchOrderBtn.addEventListener('click', () => {
+            setSwitchPointOrderMode(!state.switchPointOrderMode);
+        });
+        row.appendChild(ui.switchOrderBtn);
+
         const restart = document.createElement('button');
         restart.textContent = 'Restart';
         restart.addEventListener('click', () => {
@@ -544,6 +576,10 @@ function buildPathGroup() {
             id: 'checkboxAdaptiveThickness', type: 'checkbox',
             label: 'Path Adaptive Thickness On/Off', value: state.view.adaptiveThickness,
         }),
+        addRow(GROUPS.PATH, {
+            id: 'checkboxStrokeRoundCap', type: 'checkbox',
+            label: 'Stroke Round Cap On/Off', value: state.view.strokeRoundCap,
+        }),
     ];
     window.renderControlArray(controls, 'buildPathGroup');
 }
@@ -557,6 +593,7 @@ const VIEW_BY_CONTROL_ID = {
     colorPathColor: 'pathColor',
     checkboxProgressiveThickness: 'progressiveThickness',
     checkboxAdaptiveThickness: 'adaptiveThickness',
+    checkboxStrokeRoundCap: 'strokeRoundCap',
 };
 
 
@@ -693,8 +730,50 @@ function applyAnimationRoute() {
     const midlineEndpoints = (r.vector.nodes || [])
         .filter((n) => n.kind === 'endpoint')
         .map((n) => ({ x: n.xPx, y: n.yPx }));
-    animator.setRoute(useTween
-        ? tweenAnimationRoute(state.tweenResult, {
+    // Resolve the stroke order. A manual edit for this exact geometry
+    // wins over a learned order: the user is looking at this route right
+    // now, and a direct instruction beats a stored one matched by
+    // proximity.
+    let route = buildRoute(useTween, state.routeOrderOverride, midlineEndpoints, r);
+    state.learnedMatch = null;
+
+    // Only single characters are learned. A whole string's stops span
+    // several glyphs, and anchors normalised against the whole line
+    // would not transfer to that letter on its own - which is the entire
+    // point of storing them.
+    if (!state.routeOrderOverride && route.stops && state.text && state.text.length === 1) {
+        const box = rasterBounds(r);
+        const anchors = readLearned(state.learnedOrders, state.fontInfo, state.text);
+        if (anchors && box) {
+            const res = orderFromLearned(route.stops, anchors, box);
+            state.learnedMatch = { matched: res.matched, total: res.total };
+            if (res.ids && res.matched > 0) {
+                // Rebuilt rather than renumbered. Renumbering the labels
+                // without re-flattening would show a new order while the
+                // animation still walked the old one.
+                route = buildRoute(useTween, res.ids, midlineEndpoints, r);
+            }
+        }
+    }
+
+    animator.setRoute(route);
+    renderer.setRoute(route);
+    // Preserve position proportionally so switching source mid-run does
+    // not snap the dot back to the start.
+    animator.seekToFraction(fraction);
+    renderer.draw();
+}
+
+// One route, from either source, with an optional explicit order.
+//
+// The midline branch re-flattens through the shared flattenOrdered()
+// rather than reusing the precomputed traversal.animation, because that
+// one was flattened in the traversal's own order and cannot express a
+// reorder. With no override it returns the precomputed route untouched,
+// so the ordinary path is unchanged.
+function buildRoute(useTween, override, midlineEndpoints, r) {
+    if (useTween) {
+        return tweenAnimationRoute(state.tweenResult, {
             nearestRouting: state.config.nearestRouting,
             entryMode: state.config.tweenEntryAtEndpoints === false ? 'nearest' : 'endpoints',
             loopAnchors: midlineEndpoints,
@@ -706,11 +785,100 @@ function applyAnimationRoute() {
                 const seg = r.vector.segments.find((x) => x.id === edgeId);
                 return seg ? seg.letterIndex : null;
             },
-        })
-        : r.traversal.animation);
-    // Preserve position proportionally so switching source mid-run does
-    // not snap the dot back to the start.
-    animator.seekToFraction(fraction);
+            orderOverride: override,
+        });
+    }
+    if (!override) return r.traversal.animation;
+
+    // Ids must match traversal.mjs's own stop ids exactly, or an
+    // override captured from the drawn stops would match nothing.
+    const draws = r.traversal.segments.filter((sg) => sg.kind === 'draw');
+    const ordered = draws.map((sg, i) => ({
+        id: `seg:${sg.edgeId ?? i}:${i}`,
+        runs: [sg.pointsPx],
+        edgeId: sg.edgeId ?? null,
+        letter: sg.letterIndex ?? null,
+    }));
+    return flattenOrdered(applyOrderOverride(ordered, override));
+}
+
+// ---- Switch Point Order --------------------------------------------
+
+function setSwitchPointOrderMode(on) {
+    state.switchPointOrderMode = !!on;
+    renderer.setPendingStop(null);
+    if (ui.switchOrderBtn) {
+        ui.switchOrderBtn.textContent = state.switchPointOrderMode
+            ? 'Switch Point Order: ON' : 'Switch Point Order';
+        ui.switchOrderBtn.classList.toggle('active', state.switchPointOrderMode);
+    }
+    // Turning the mode on is useless if the targets are invisible, so it
+    // turns their layers on rather than leaving the user to find them.
+    if (state.switchPointOrderMode) {
+        state.layers.routePoints = true;
+        state.layers.routeOrder = true;
+        syncLayerCheckboxes();
+        renderer.setLayers(state.layers);
+    }
+    canvas.style.cursor = state.switchPointOrderMode ? 'crosshair' : '';
+    setStatus(state.switchPointOrderMode
+        ? 'Switch Point Order: click two route points to swap them. Click the button again to exit.'
+        : 'Switch Point Order off.');
+    renderer.draw();
+}
+
+function syncLayerCheckboxes() {
+    for (const key of ['routePoints', 'routeOrder']) {
+        const el = document.getElementById(controlIdFor('layer' + key.charAt(0).toUpperCase() + key.slice(1), 'checkbox'));
+        if (el) el.checked = !!state.layers[key];
+    }
+}
+
+function onCanvasClickForSwitch(e) {
+    if (!state.switchPointOrderMode) return;
+    const stops = renderer.stops();
+    if (!stops.length) return;
+
+    // Screen -> raster, the inverse of the renderer's own transform.
+    const rect = canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const sy = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const scale = renderer.view.scale || 1;
+    const x = (sx - renderer.view.offsetX) / scale;
+    const y = (sy - renderer.view.offsetY) / scale;
+
+    // A fixed SCREEN radius converted to raster units, so the target
+    // stays the same size under the cursor at any zoom.
+    const hit = stopNearest(stops, x, y, 14 / scale);
+    if (!hit) { setStatus('No route point there — click closer to a marker.', 'warn'); return; }
+
+    // The click is ours: stop it reaching the viewport controller, which
+    // would otherwise treat it as the start of a pan.
+    e.preventDefault();
+    e.stopPropagation();
+
+    const pending = renderer.pendingStopId;
+    if (!pending) {
+        renderer.setPendingStop(hit.id);
+        setStatus(`Point ${hit.order} selected — now click the point to swap it with.`);
+        renderer.draw();
+        return;
+    }
+    if (String(pending) === String(hit.id)) {
+        renderer.setPendingStop(null);
+        setStatus('Selection cleared.');
+        renderer.draw();
+        return;
+    }
+
+    const first = stops.find((st) => String(st.id) === String(pending));
+    const ids = first ? swapStops(stops, first.order, hit.order) : null;
+    renderer.setPendingStop(null);
+    if (!ids) { setStatus('Could not swap those two points.', 'warn'); return; }
+
+    state.routeOrderOverride = ids;
+    applyAnimationRoute();
+    setStatus(`Swapped points ${first.order} and ${hit.order}.`, 'ok');
 }
 
 
@@ -1011,7 +1179,16 @@ async function syncToRemote() {
         path: f.savedPath || (FONT_DIR + f.fileName),
     }));
 
-    const patch = { importedFonts: manifest };
+    // Learn the order currently on screen for this font+character before
+    // writing. Stored as normalised anchors, not ids - see routeOrder.mjs.
+    const stops = renderer.stops();
+    if (stops.length && state.text && state.text.length === 1 && state.result && state.result.ok) {
+        const box = rasterBounds(state.result);
+        const anchors = toLearnedOrder(stops, box);
+        if (anchors) state.learnedOrders = writeLearned(state.learnedOrders, state.fontInfo, state.text, anchors);
+    }
+
+    const patch = { importedFonts: manifest, learnedOrders: state.learnedOrders };
     if (typeof window.captureFullDevPanelState === 'function') {
         patch.devPanel = window.captureFullDevPanelState();
     }
@@ -1033,6 +1210,12 @@ async function syncToRemote() {
 // selectable again without re-picking the file.
 async function restoreSavedFonts(select) {
     const settings = await remoteGetSettings();
+    // Learned stroke orders ride along with the same document. Restored
+    // before the fonts, so the first pipeline run after a font loads can
+    // already apply them.
+    if (settings && settings.learnedOrders && typeof settings.learnedOrders === 'object') {
+        state.learnedOrders = { ...state.learnedOrders, ...settings.learnedOrders };
+    }
     const manifest = (settings && settings.importedFonts) || [];
     if (!manifest.length) return;
     for (const entry of manifest) {

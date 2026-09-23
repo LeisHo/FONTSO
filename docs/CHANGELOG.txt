@@ -1299,6 +1299,109 @@ Not cleaned: the embedded blobs remain in git history. Removing them
 needs a history rewrite, not worth it for ~1MB here.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  3:31 AM - 3:44 AM
+
+Five requests, arriving during the work.
+
+1. LAYERS: ANIMATION ROUTE POINTS + ORDER NUMBERS.
+Two new layers, deliberately distinct from the existing
+traversal/order pair: those describe the MIDLINE traversal's segments
+regardless of which route the animation is actually following, whereas
+these draw the live animation route's own stops. Both route builders
+(tween and midline) now emit a `stops` array of the same shape, so the
+layers work against either source without caring which produced it.
+Order numbers are drawn offset from the marker so they never cover the
+thing being clicked.
+
+2. SWITCH POINT ORDER MODE.
+A button in the Animation group. A MODE, not an action: it stays on
+until clicked again, so a run of swaps does not need it re-armed. Click
+two route points to swap them; the numbers update and the animation
+follows. Turning it on also turns the two layers above on - the mode is
+useless if the targets are invisible. The first-clicked point is drawn
+distinctly, because without that a click that registered and a click
+that missed look identical.
+
+The canvas listener is CAPTURING and on pointerdown, not click: the
+viewport controller starts a pan on pointerdown, so a click-based
+listener would fire only after a pan had already moved the view out
+from under the cursor.
+
+A swap is stored as an explicit id SEQUENCE, never as "swap 3 and 5".
+The nearest-neighbour router can produce a different ordering the moment
+anything upstream changes, and a positional instruction would then swap
+two unrelated strokes.
+
+3. LEARNED STROKE ORDER, PERSISTED PER FONT+CHARACTER.
+New module routeOrder.mjs. The hard part is identity: a saved order
+cannot reference stops by id or index, because `edgeId:left` is assigned
+by the skeleton graph and any change to raster height, thinning or
+pruning renumbers everything. So an order is stored as a sequence of
+positions in NORMALISED GLYPH SPACE (0..1 within the glyph's own raster
+bounding box) and matched back by proximity, greedy nearest-pair-first
+rather than in anchor order so one bad early match cannot cascade.
+
+Only single characters are learned. A whole string's stops span several
+glyphs and anchors normalised against the whole line would not transfer
+to that letter alone - which is the entire point of storing them.
+
+Saved with Sync, in the same settings document, restored before the
+fonts so the first pipeline run after a font loads can already apply
+them. A manual edit for the current geometry wins over a learned order:
+a direct instruction about the route on screen beats a stored one
+matched by proximity.
+
+Honest limitation, surfaced rather than hidden: if a settings change
+alters the skeleton's TOPOLOGY, some stops have no counterpart. Those
+keep their computed position instead of being forced somewhere by a bad
+match, and the match count is recorded so a partial match is visible.
+
+4. PROGRESSIVE THICKNESS FLOORS AT THE SLIDER VALUE.
+Adaptive width is now a floor-plus-glyph rule rather than a pure glyph
+rule. The distance field goes to zero at every terminal and pinches at
+thin joins, so without a floor the stroke vanished exactly where the eye
+expects a stroke end. Applied to ALL adaptive ribbons, not only the
+progressive trail: a floor that applied only to the travelled portion
+would make the width jump discontinuously at the dot. The slider stays
+meaningful with adaptive on - it sets the minimum rather than the width.
+
+5. STROKE ROUND CAP ON/OFF.
+Flat (off) was already what a ribbon did, its end being a straight edge
+between the two boundaries. On adds a half-disc centred on the path with
+that edge as its diameter, traced as a sub-path on the same fill so it
+merges with the body rather than seaming. The plain non-adaptive stroke
+uses lineCap round vs butt.
+
+Design note on the midline reorder: the precomputed traversal.animation
+was flattened in the traversal's own order and cannot express a reorder,
+so an override re-flattens through a shared flattenOrdered(). Renumbering
+the labels without re-flattening would have shown a new order while the
+animation still walked the old one - worse than not offering the feature.
+With no override the precomputed route is returned untouched, so the
+ordinary path is unchanged.
+
+Verified (live, real browser, Comic Sans 'H', midline route, 5 stops):
+- SWAP IS REAL, NOT COSMETIC. Driven by real PointerEvents on the canvas
+  at the markers' own screen coordinates. Positions 1 and 3 exchanged
+  (seg:3:0 <-> seg:1:2), and the flattened route's first DRAWN point
+  then equalled the new first stop to within 0.01px - so the animation
+  follows the edit, not just the labels.
+- LEARNED ORDER SURVIVES A SETTINGS CHANGE. Order taught at
+  rasterEmHeight 256, then the raster changed to 384, which renumbers
+  the skeleton entirely: matched 5/5, and every stop landed at exactly
+  1.5x its former position (149->222, 20->29, 15->21, 104->153,
+  191->286). Same stroke order, completely different geometry.
+- Round cap adds 506 painted px over flat (6,388 -> 6,894, +7.92%).
+- Thickness floor: at 1px and 20px the painted area is identical
+  (6,894), because Comic Sans 'H' has a natural half-width of ~13-16px
+  and a 20px FULL width is a 10px half-width - below the glyph
+  everywhere, so a minimum correctly changes nothing. At 40px (20px
+  half) it exceeds the natural width in the thin places and the stroke
+  widens to 7,402. That is the floor behaving as a floor; an initial
+  test assertion expecting monotonic growth from 1px was simply wrong
+  about what a minimum does.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
