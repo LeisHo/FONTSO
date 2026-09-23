@@ -13,6 +13,8 @@
 // is self-describing.
 // ====================================================================
 
+import { buildRibbon } from '../adaptiveWidth.mjs';
+
 export const LAYER_COLORS = {
     glyphFill: 'rgba(120, 130, 150, 0.22)',
     glyphOutline: 'rgba(150, 165, 195, 0.85)',
@@ -46,6 +48,9 @@ export const DEFAULT_VIEW = {
     // animated dot has already travelled, leaving the rest at the plain
     // centreline width — so the path visibly "inks in" as the dot moves.
     progressiveThickness: false,
+    // Width comes from the glyph's own distance field instead of the
+    // Path Thickness slider. See adaptiveWidth.mjs for the two modes.
+    adaptiveThickness: false,
 };
 
 export const DEFAULT_LAYERS = {
@@ -77,8 +82,16 @@ export class Renderer {
         // than derived here so a slider tick costs one recompute, not one
         // per frame of the animation loop.
         this.tween = null;
+        // 'midline' | 'tween'. Drives adaptiveMode(); pushed in by the
+        // host so the renderer never has to guess which path the dot is
+        // actually walking.
+        this.animationPath = 'midline';
         // Owned by the viewport controller; see setResult().
         this.autoFit = true;
+    }
+
+    setAnimationPath(kind) {
+        this.animationPath = kind === 'tween' ? 'tween' : 'midline';
     }
 
     setTween(tween) {
@@ -313,18 +326,112 @@ export class Renderer {
         // constant screen width while the glyph zoomed underneath it, and
         // the number in the panel would mean nothing.
         ctx.lineWidth = inkWholePath ? Math.max(1, v.pathThicknessPx * this.view.scale) : 2;
-        for (const seg of r.vector.segments) this.strokePolyline(seg.pointsPx);
+
+        // Adaptive replaces the stroke entirely rather than adjusting its
+        // width: canvas lineWidth is a property of the whole path, so a
+        // width that varies vertex by vertex has to be a filled ribbon.
+        const adaptive = thick && v.adaptiveThickness && this.canMeasureWidth();
+        if (adaptive && inkWholePath) {
+            ctx.fillStyle = v.pathColor;
+            // Ink whichever geometry the animation is actually set to
+            // follow, so "adaptive" means the same thing whether or not
+            // the dot is moving. Only the adaptive branch does this; the
+            // plain-thickness branch below still inks the midline, which
+            // is what it has always done.
+            for (const src of this.inkSources()) {
+                this.fillAdaptiveRibbon(src.pts, { closed: src.closed, mode: src.mode });
+            }
+        } else {
+            for (const seg of r.vector.segments) this.strokePolyline(seg.pointsPx);
+        }
         ctx.restore();
 
         if (thick && v.progressiveThickness && this.trail && this.trail.length > 1) {
             ctx.save();
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
-            ctx.strokeStyle = v.pathColor;
-            ctx.lineWidth = Math.max(1, v.pathThicknessPx * this.view.scale);
-            this.strokePolyline(this.trail);
+            if (adaptive) {
+                // The travelled portion, painted out to the outline. On
+                // the midline that fills the stroke from both sides; on a
+                // tween curve it reaches the adjacent side only, so the
+                // glyph is revealed one stroke-edge at a time.
+                ctx.fillStyle = v.pathColor;
+                this.fillAdaptiveRibbon(this.trail, { closed: false, mode: this.trailMode() });
+            } else {
+                ctx.strokeStyle = v.pathColor;
+                ctx.lineWidth = Math.max(1, v.pathThicknessPx * this.view.scale);
+                this.strokePolyline(this.trail);
+            }
             ctx.restore();
         }
+    }
+
+    // Adaptive width needs the distance field the pipeline produced. It
+    // is absent on a failed run, so callers check before relying on it
+    // rather than silently drawing a zero-width ribbon.
+    canMeasureWidth() {
+        const r = this.result;
+        return !!(r && r.distanceField && r.raster && r.raster.width && r.raster.height);
+    }
+
+    // Which side the ribbon grows toward. The MIDLINE is equidistant from
+    // both outlines, so it always grows both ways — including while the
+    // dot is walking a tween curve. A TWEEN curve has already been pushed
+    // toward one outline, so it grows only to that adjacent side.
+    trailMode() {
+        return this.animationPath === 'tween' ? 'outward' : 'both';
+    }
+
+    // The polylines the adaptive ink is painted along, matching whatever
+    // the animation is set to follow.
+    inkSources() {
+        const r = this.result;
+        if (this.animationPath === 'tween' && this.tween && this.tween.curves) {
+            const out = [];
+            for (const c of this.tween.curves) {
+                if (c.left && c.left.length > 1) out.push({ pts: c.left, closed: !!c.isLoop, mode: 'outward' });
+                if (c.right && c.right.length > 1) out.push({ pts: c.right, closed: !!c.isLoop, mode: 'outward' });
+            }
+            if (out.length) return out;
+        }
+        return (r.vector.segments || []).map((seg) => ({
+            pts: seg.pointsPx, closed: !!seg.isLoop, mode: 'both',
+        }));
+    }
+
+    fillAdaptiveRibbon(pts, { closed = false, mode = 'both' } = {}) {
+        if (!pts || pts.length < 2 || !this.canMeasureWidth()) return;
+        const r = this.result;
+        const ribbon = buildRibbon(pts, r.distanceField, r.raster.width, r.raster.height, {
+            mode,
+            closed,
+            // Half a raster pixel, so a hairline stroke never vanishes
+            // where the distance field rounds to zero at a terminal.
+            minHalfPx: 0.5,
+        });
+        if (!ribbon) return;
+        const { ctx } = this;
+        ctx.beginPath();
+        if (closed) {
+            // Two rings, even-odd: the inner edge stays a hole, so the
+            // counter of an 'o' does not get filled in.
+            this.tracePolygon(ribbon.outer, true);
+            this.tracePolygon(ribbon.inner, true);
+            ctx.fill('evenodd');
+        } else {
+            this.tracePolygon(ribbon.outer.concat(ribbon.inner.slice().reverse()), true);
+            ctx.fill();
+        }
+    }
+
+    tracePolygon(points, closePath) {
+        const { ctx } = this;
+        for (let i = 0; i < points.length; i++) {
+            const s = this.toScreen(points[i].x, points[i].y);
+            if (i === 0) ctx.moveTo(s.x, s.y);
+            else ctx.lineTo(s.x, s.y);
+        }
+        if (closePath) ctx.closePath();
     }
 
     // The tween curves. Drawn ABOVE the skeleton and BELOW the graph

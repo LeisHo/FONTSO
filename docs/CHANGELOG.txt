@@ -1016,6 +1016,72 @@ Verified (live, real browser, https://fontso.vercel.app/?dev=1):
   Vercel project).
 
 --------------------------------------------------------------------------------
+2026-09-23  -  2:04 AM - 2:11 AM
+
+Requested (§12g shorthand): *D* Path Adaptive Thickness On/Off* - the
+path's thickness varies to reach the actual glyph outline, reaching both
+sides from the midline and the adjacent side only from a tween curve, so
+an animating path progressively defines the real letterform.
+
+Added:
+- adaptiveWidth.mjs, a new stage. Builds a variable-width RIBBON from a
+  polyline using the distance field the pipeline already computes, which
+  holds distance-to-nearest-outline at every pixel - exactly the
+  half-width a stroke needs there to touch it. Two modes: 'both' offsets
+  by +/-d along the tangent normal (the midline is equidistant from both
+  outlines, so both edges land on the glyph), 'outward' offsets by d
+  toward the nearest boundary with the path itself as the inner edge.
+- Path Adaptive Thickness On/Off in the Path group. When on, the Path
+  Thickness slider no longer applies - width comes from the glyph.
+- Renderer: fills ribbons instead of stroking, because canvas lineWidth
+  is a property of the whole path and cannot vary along it. A closed
+  curve is drawn as two rings filled even-odd so a counter stays a hole.
+- Renderer learned which path the animation follows, pushed in by the
+  host from the RESOLVED choice rather than the dropdown: with the tween
+  off, "Tween" already falls back to the midline, and adaptive width
+  would otherwise have grown one-sided along a centreline.
+
+Design notes:
+- The outward direction comes from the FIELD GRADIENT, not from whichever
+  side tween.mjs offset toward. -grad points at the nearest boundary by
+  definition, so the module stays independent of the tween stage and
+  stays correct for a welded curve whose vertices came from two different
+  parents and no longer share a side. It is ill-conditioned only ON the
+  medial axis - exactly the case the two-sided mode handles - so below a
+  gradient-magnitude floor of 0.35 it falls back to the tangent normal,
+  which keeps the ribbon continuous instead of letting it flip sides.
+- Geometry helpers are duplicated from tween.mjs on purpose. lab/ is
+  meant to be liftable as a standalone geometry engine, and importing
+  them would drag the whole welding stage in behind it.
+
+Fixed during the build:
+- The first cut derived the ribbon mode globally from the animation path,
+  which made the MIDLINE grow one-sided whenever the dot happened to be
+  walking a tween curve. The midline is equidistant from both outlines
+  regardless of what the dot is doing; mode is now per-call.
+
+Verified (live, real browser, Comic Sans 'A', 256px default raster):
+- Outward (tween) mode is the accurate one: outer edge sits a MEDIAN OF
+  0.08px from the outline, p90 0.47px, over a 195-point trail. Inner
+  edge is byte-identical to the path itself, as the mode requires.
+- Midline mode is approximate: covers 87.0% of the glyph's 10,753 mask
+  pixels, 1.4% spill outside, IoU 0.858. Measured by rasterising the
+  ribbons to an offscreen canvas and comparing against the real mask -
+  not inferred from the same distances used to build them.
+- The missing 13% is at terminals and junctions, where thinning has
+  already eroded the skeleton inward. That is the known defect already
+  on the Limitations list, not a new one, and it under-reaches rather
+  than bleeding past the outline.
+- Control appears in the Path group in the requested position, and both
+  checkbox states drive state.view correctly.
+
+Note on method: the animator's rAF is frozen while the browser pane is
+not fronted in this sandbox, so the trail stayed at 1 point and
+"playing: true" was misleading. Pumping real frames with a screenshot
+interaction advanced it to 195 points. Do not read a frozen animation
+here as an app bug.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

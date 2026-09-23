@@ -535,6 +535,10 @@ function buildPathGroup() {
             id: 'checkboxProgressiveThickness', type: 'checkbox',
             label: 'Progressive Thickness On/Off', value: state.view.progressiveThickness,
         }),
+        addRow(GROUPS.PATH, {
+            id: 'checkboxAdaptiveThickness', type: 'checkbox',
+            label: 'Path Adaptive Thickness On/Off', value: state.view.adaptiveThickness,
+        }),
     ];
     window.renderControlArray(controls, 'buildPathGroup');
 }
@@ -547,6 +551,7 @@ const VIEW_BY_CONTROL_ID = {
     sliderPathThickness: 'pathThicknessPx',
     colorPathColor: 'pathColor',
     checkboxProgressiveThickness: 'progressiveThickness',
+    checkboxAdaptiveThickness: 'adaptiveThickness',
 };
 
 
@@ -674,6 +679,10 @@ function applyAnimationRoute() {
     const fraction = animator.totalLength > 0 ? animator.progress : 0;
     const useTween = state.animationPath === 'tween'
         && state.tweenResult && state.tweenResult.curves.length;
+    // The renderer needs the RESOLVED choice, not the dropdown: with the
+    // tween off, "Tween" falls back to the midline above, and adaptive
+    // width would otherwise grow one-sided along a centreline.
+    renderer.setAnimationPath(useTween ? 'tween' : 'midline');
     // Midline endpoints (free tips of the skeleton graph) are where a
     // tween LOOP should start, per the entry rule in routing.mjs.
     const midlineEndpoints = (r.vector.nodes || [])

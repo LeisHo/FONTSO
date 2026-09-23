@@ -56,6 +56,33 @@ Pipeline Report, Path Data JSON). All 17 pipeline parameters are exposed.
    as a real stroke at a chosen width and colour instead of a 2px line.
    Tick *Progressive Thickness* too and press Play — the path then inks
    in behind the dot, leaving the untravelled remainder thin.
+   Tick *Path Adaptive Thickness* and the width stops coming from the
+   slider and comes from the glyph instead: the stroke widens and
+   narrows to touch the real outline, so an animated path paints the
+   letter out as it goes.
+
+   Adaptive width reads the distance transform, which already holds the
+   distance to the nearest outline at every pixel — exactly the
+   half-width needed to touch it. Which way the ribbon grows depends on
+   where the path sits:
+
+   - The **midline** is equidistant from both outlines, so it grows both
+     ways by that distance and fills the stroke.
+   - A **tween curve** has already been pushed toward one outline, so it
+     grows only to that adjacent side, with the curve itself as the
+     inner edge. That is what makes a partly-animated tween path read as
+     a partly-drawn glyph edge.
+
+   MEASURED, Comic Sans 'A' at the 256px default raster. Outward
+   (tween) mode is the accurate one: its outer edge sits a median of
+   **0.08px** from the outline (p90 0.47px), because off the medial axis
+   the field gradient points straight at the nearest boundary. Midline
+   mode is approximate: it covers **87.0%** of the glyph's 10,753 mask
+   pixels with **1.4%** spill outside, IoU **0.858**. The missing 13% is
+   at terminals and junctions, where thinning has already eroded the
+   skeleton inward — the same known defect listed under Limitations, not
+   a separate one. It under-reaches rather than bleeding past the
+   outline, which is the better direction to be wrong in.
 8. **Path Tween** group: tick it on and drag *Tween Progression* from 0
    to 1. At 0 the orange curves sit on the centreline; at 1 they land on
    the glyph outline; in between they morph. Turn the *Cleaned Skeleton*

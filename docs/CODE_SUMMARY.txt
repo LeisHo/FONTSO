@@ -205,6 +205,22 @@ GOTCHAS
   pen position and advance width (vectorize.mjs). Deriving letter
   boundaries from raster pixel clusters would merge any two letters
   whose ink happens to touch.
+- adaptiveWidth.mjs turns a polyline into a variable-width RIBBON using
+  the distance field. Canvas lineWidth is a property of a whole path, so
+  a width that changes vertex by vertex cannot be a stroke at all - it is
+  a filled polygon, and a closed curve needs two rings filled even-odd so
+  a counter stays a hole rather than being flooded.
+- Its outward direction comes from the FIELD GRADIENT, not from whichever
+  side tween.mjs offset toward. -grad points at the nearest boundary by
+  definition, which keeps the module independent of the tween stage and
+  stays correct for a welded curve whose vertices came from two different
+  parents and no longer share a side. It is only ill-conditioned ON the
+  medial axis, which is exactly the case the two-sided mode covers, so
+  the fallback there is the tangent normal.
+- Its geometry helpers are deliberately DUPLICATED from tween.mjs rather
+  than imported. lab/ is meant to be liftable as a geometry engine, and a
+  width module that drags the whole welding stage in behind it would
+  defeat that. They are a dozen lines each.
 - routing.mjs keeps "which curve next" and "where do I enter it"
   SEPARATE. Each curve proposes admissible entry points; selection is
   always pen-to-entry travel. Letting an entry rule's own distance
