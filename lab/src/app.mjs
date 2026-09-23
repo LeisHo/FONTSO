@@ -1198,7 +1198,7 @@ window.renderFontLabDevGroups = function renderFontLabDevGroups() {
 // Bumped alongside the ?v= query on the script tags, so "what build is
 // that tab running?" is answerable in one line instead of inferred from
 // behaviour.
-const BUILD = 21;
+const BUILD = 22;
 
 const SETTINGS_ENDPOINT = '/api/save-settings';
 const FONT_DIR = 'data/processed/fonts/';
@@ -1278,18 +1278,33 @@ function describeSaveFailure(res) {
     if (res.status === 0) {
         return `could not reach ${where} at all (${res.error || 'network error'}).`;
     }
+    if (res.status === 413) {
+        return `${where} rejected the request as too large (413). Vercel caps a function's request body at `
+            + `${(VERCEL_BODY_LIMIT / 1048576).toFixed(1)}MB and enforces it BEFORE the function runs, which is why `
+            + 'there is no error message. Fonts are uploaded one per request to stay under it, so seeing this '
+            + 'means a single font exceeded the cap on its own.';
+    }
     return `${where} returned HTTP ${res.status}${res.error ? ` - ${res.error}` : ' with no error message'}.`;
 }
 
-async function remoteSaveNow({ patch = {}, files = [] } = {}) {
+async function remoteSaveNow({ patch = null, files = [] } = {}) {
     try {
-        const current = (await remoteGetSettings()) || {};
         const headers = { 'Content-Type': 'application/json' };
         if (DEV_PANEL_SAVE_SECRET) headers['x-dev-panel-secret'] = DEV_PANEL_SAVE_SECRET;
+        // A files-only call passes patch === null and omits `settings`
+        // entirely; the endpoint then writes the files and leaves the
+        // settings document untouched. Skipping the GET as well matters:
+        // merging onto a document nobody is about to rewrite is wasted
+        // work, and it would be a second chance to clobber it.
+        const body = { files };
+        if (patch) {
+            const current = (await remoteGetSettings()) || {};
+            body.settings = { ...current, ...patch };
+        }
         const resp = await fetch(SETTINGS_ENDPOINT, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ settings: { ...current, ...patch }, files }),
+            body: JSON.stringify(body),
         });
         const data = await resp.json().catch(() => ({}));
         return {
@@ -1304,15 +1319,23 @@ async function remoteSaveNow({ patch = {}, files = [] } = {}) {
     }
 }
 
+// Vercel's serverless request-body cap. Enforced by their edge BEFORE
+// the function is invoked, so an oversized POST returns a bare 413 with
+// no JSON body - the endpoint never runs and never gets to explain
+// itself. Kept slightly under the real 4.5MB as headroom for the JSON
+// envelope around the payload.
+const VERCEL_BODY_LIMIT = 4.5 * 1024 * 1024;
+const BODY_BUDGET = 4.0 * 1024 * 1024;
+
 // Called on every Sync. Uploads any font not yet committed, then writes
 // the settings document including the font manifest.
+//
+// Fonts are uploaded in size-bounded batches; the settings document
+// goes last, in its own request, so it lands even if a font fails. See
+// the packing loop below for why neither all-in-one nor one-per-request
+// is right.
 async function syncToRemote() {
     const pending = unsavedFonts();
-    const files = pending.map((f) => ({
-        path: FONT_DIR + f.fileName,
-        contentBase64: bytesToBase64(f.bytes),
-        message: `Add imported font ${f.fileName} via Font Path Laboratory`,
-    }));
 
     const manifest = listFonts().map((f) => ({
         key: f.key,
@@ -1349,8 +1372,63 @@ async function syncToRemote() {
         patch.devPanel = window.captureFullDevPanelState();
     }
 
-    setStatus(pending.length ? `Saving ${pending.length} font(s) + settings…` : 'Saving settings…');
-    const res = await remoteSave({ patch, files });
+    // Fonts are PACKED INTO BATCHES that fit under the body cap, not sent
+    // one per request and not all in one.
+    //
+    // All-in-one is what broke saving: base64 inflates bytes by a third,
+    // so three ordinary faces encode to ~5.3MB, the POST was rejected
+    // 413, and the settings went down with it since they rode along.
+    //
+    // One-per-request would fix that but produces one GitHub commit per
+    // font - a library of dozens would bury the repo history in noise.
+    // Greedy packing keeps each request under the cap while using as few
+    // as possible.
+    const written = [];
+    const tooBig = [];
+    const savedOk = [];
+
+    const batches = [];
+    let batch = [];
+    let batchBytes = 0;
+    for (const f of pending) {
+        const contentBase64 = bytesToBase64(f.bytes);
+        if (contentBase64.length > BODY_BUDGET) {
+            // Nothing can be done for a single font over the cap; skip it
+            // by name rather than failing the whole save around it.
+            tooBig.push(`${f.fileName} (${(f.size / 1048576).toFixed(1)}MB)`);
+            continue;
+        }
+        if (batch.length && batchBytes + contentBase64.length > BODY_BUDGET) {
+            batches.push(batch);
+            batch = [];
+            batchBytes = 0;
+        }
+        batch.push({
+            font: f,
+            file: {
+                path: FONT_DIR + f.fileName,
+                contentBase64,
+                message: `Add imported font ${f.fileName} via Font Path Laboratory`,
+            },
+        });
+        batchBytes += contentBase64.length;
+    }
+    if (batch.length) batches.push(batch);
+
+    for (let i = 0; i < batches.length; i++) {
+        const b = batches[i];
+        setStatus(`Uploading fonts: batch ${i + 1} of ${batches.length} (${b.length} font(s))…`);
+        const r = await remoteSave({ files: b.map((x) => x.file) });
+        if (!r.ok) {
+            setStatus(`Font upload failed on batch ${i + 1} of ${batches.length}: ${describeSaveFailure(r)}`, 'error');
+            return;
+        }
+        written.push(...(r.written || []));
+        savedOk.push(...b.map((x) => x.font));
+    }
+
+    setStatus('Saving settings…');
+    const res = await remoteSave({ patch, files: [] });
     if (!res.ok) {
         // A POST can COMMIT and still report failure: the write reaches
         // GitHub, then the response is lost to a dropped connection or a
@@ -1363,7 +1441,7 @@ async function syncToRemote() {
         // document and look for this attempt's own stamp.
         const after = await remoteGetSettings();
         if (after && after.lastSaveStamp === saveStamp) {
-            for (const f of pending) markSaved(f.key, FONT_DIR + f.fileName);
+            for (const f of savedOk) markSaved(f.key, FONT_DIR + f.fileName);
             refreshFontList();
             setStatus('Saved to the repo — the confirmation was lost in transit, but the write landed.', 'ok');
             return;
@@ -1401,9 +1479,17 @@ async function syncToRemote() {
             : `Saved to localStorage only. The repo save failed: ${describeSaveFailure(res)}`, 'error');
         return;
     }
-    for (const f of pending) markSaved(f.key, FONT_DIR + f.fileName);
-    setStatus(`Saved ${res.written.length} file(s) to the repo: ${res.written.join(', ')}`, 'ok');
+    // Only fonts that actually uploaded are marked saved - one skipped
+    // for size must stay pending, or a later Sync would never retry it.
+    for (const f of savedOk) markSaved(f.key, FONT_DIR + f.fileName);
+    written.push(...(res.written || []));
     refreshFontList();
+    if (tooBig.length) {
+        setStatus(`Saved ${written.length} file(s), but skipped ${tooBig.length} font(s) too large for the `
+            + `${(VERCEL_BODY_LIMIT / 1048576).toFixed(1)}MB request cap: ${tooBig.join(', ')}.`, 'warn');
+        return;
+    }
+    setStatus(`Saved ${written.length} file(s) to the repo: ${written.join(', ')}`, 'ok');
 }
 
 // On startup, pull the manifest and fetch each saved font back so it is
