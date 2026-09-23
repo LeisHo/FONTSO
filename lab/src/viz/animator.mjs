@@ -14,6 +14,27 @@
 // visualiser dim the trail during pen-up moves.
 // ====================================================================
 
+// Contiguous runs of DRAWN points from the start of the route up to
+// `end`, breaking wherever a connector appears.
+//
+// A connector's own point is excluded rather than used to close the run
+// it follows: it sits at the START of the next stroke, not the end of
+// the previous one, so including it would stretch every run forward
+// into the gap - which is the same artefact in a subtler form.
+function drawnRuns(flat, end) {
+    const runs = [];
+    let current = null;
+    for (let i = 0; i < end && i < flat.length; i++) {
+        const f = flat[i];
+        if (f.kind === 'connector') { current = null; continue; }
+        if (!current) { current = []; runs.push(current); }
+        current.push(f.p);
+    }
+    // A single point cannot be stroked or filled as a ribbon and would
+    // only produce a stray dot at a stroke's first frame.
+    return runs.filter((r) => r.length > 1);
+}
+
 export class PathAnimator {
     constructor(onFrame) {
         this.onFrame = onFrame;
@@ -126,6 +147,13 @@ export class PathAnimator {
             distance: d,
             fraction: totalLength > 0 ? d / totalLength : 0,
             trail: flat.slice(0, i).map((f) => f.p),
+            // The trail SPLIT AT PEN-UP MOVES. `trail` above is one
+            // continuous polyline, which is right for the dot's faint
+            // wake but wrong for inking: drawing it as a single stroke
+            // paints over every connector, so the ink crosses gaps the
+            // pen never drew. Anything that renders the travelled path
+            // as real ink wants these runs instead.
+            trailRuns: drawnRuns(flat, i),
         };
     }
 }

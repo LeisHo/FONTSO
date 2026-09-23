@@ -1388,6 +1388,7 @@ function onAnimationFrame(frame) {
     if (!frame) return;
     renderer.dot = frame.point;
     renderer.trail = frame.trail;
+    renderer.trailRuns = frame.trailRuns || null;
     if (ui.scrub) ui.scrub.value = String(Math.round(frame.fraction * 1000));
     if (ui.animInfo) {
         ui.animInfo.textContent =

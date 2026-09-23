@@ -1535,6 +1535,52 @@ Verified (live, real browser):
   removed, list back to the empty placeholder.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  4:08 AM - 4:19 AM
+
+Report: with Tween as the animation path and adaptive thickness on, the
+inked route is thinner at the transitions.
+
+FIXED, but it is not the cause of what was reported. animator.sample()
+returned the trail as bare points, discarding each point's `kind`, so
+the renderer could not tell a drawn stroke from a pen-up move and inked
+straight through every connector. The trail is now also exposed as
+`trailRuns` - contiguous DRAWN runs, split at pen-up moves - and the
+progressive ink draws each run separately. Inking across a pen-up move
+is wrong on its own terms, and it also made the round cap meaningless
+by joining each stroke to the next.
+
+MEASURED SIZE OF THAT FIX, so it is not overstated: 282 pixels differ
+between the two renders, 41 of which were inked only when connectors
+were included. Real, but far too small to be the reported symptom.
+
+FIRST HYPOTHESIS WAS WRONG, recorded because the wrong reasoning is
+worth not repeating: the guess was that connector points sit where
+distance-to-outline is ~0, collapsing the ribbon to its minimum width.
+Measured and false - sampling distance-to-outline along the trail gave
+min 5.36 and median 6.37 with ZERO points below 1px, and the same
+figures with and without connectors. Ribbon width is also uniform
+WITHIN every run (median 6.1-6.6, ends not thin), so it is not a taper
+at curve ends either.
+
+THE ACTUAL CAUSE, identified by rendering it rather than reasoning about
+it. In 'outward' mode each ribbon spans from its tween curve to the
+ADJACENT outline only. At Tween Progression 0.5 the curves sit halfway
+out, so the left ribbon covers the outer-left band, the right ribbon the
+outer-right band, and the CORE BETWEEN THE TWO CURVES IS NEVER INKED -
+a dark seam down the centre of every stroke, which widens into visible
+notches at junctions where the curves diverge. That is the "thinner at
+the transitions" being seen.
+
+NOT changed, deliberately: that is the behaviour the feature was
+specified with ("when its the tween path, it will only reach the
+adjacent side"). Filling the core is a change to that rule, not a bug
+fix, so it was put back to the user rather than chosen unilaterally.
+
+Method note: two hypotheses were tested and rejected by measurement
+before the cause was found by simply rendering the state and looking at
+it. The screenshot answered in seconds what the sampling could not.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

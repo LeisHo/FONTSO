@@ -88,6 +88,8 @@ export class Renderer {
         this.view = { scale: 1, offsetX: 0, offsetY: 0 };
         this.dot = null; // {x, y} in raster px
         this.trail = [];
+        // The trail split at pen-up moves; see animator.drawnRuns.
+        this.trailRuns = null;
         // Set by the app whenever the tween is (re)computed. Held rather
         // than derived here so a slider tick costs one recompute, not one
         // per frame of the animation loop.
@@ -135,6 +137,7 @@ export class Renderer {
         this.result = result;
         this.dot = null;
         this.trail = [];
+        this.trailRuns = null;
         // Only re-frame when auto-fit is on. With it off the user's own
         // zoom/pan survives a glyph change, which is the whole point of
         // the setting: comparing the same region across several fonts.
@@ -380,6 +383,20 @@ export class Renderer {
         ctx.restore();
 
         if (thick && v.progressiveThickness && this.trail && this.trail.length > 1) {
+            // PER RUN, not over the whole trail. The trail is continuous
+            // across pen-up moves, so inking it as one path paints the
+            // connectors too - and because a connector runs outside the
+            // stroke where distance-to-outline is ~0, an adaptive ribbon
+            // collapsed to its minimum width there. That read as "the
+            // transitions are thinner" when the real fault was that the
+            // transitions were being drawn at all.
+            //
+            // Drawing runs separately also makes the round cap mean
+            // something: each stroke now genuinely ends where the pen
+            // lifts, instead of being joined to the next one.
+            const runs = (this.trailRuns && this.trailRuns.length)
+                ? this.trailRuns
+                : [this.trail];
             ctx.save();
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
@@ -389,12 +406,14 @@ export class Renderer {
                 // tween curve it reaches the adjacent side only, so the
                 // glyph is revealed one stroke-edge at a time.
                 ctx.fillStyle = v.pathColor;
-                this.fillAdaptiveRibbon(this.trail, { closed: false, mode: this.trailMode() });
+                for (const run of runs) {
+                    this.fillAdaptiveRibbon(run, { closed: false, mode: this.trailMode() });
+                }
             } else {
                 ctx.strokeStyle = v.pathColor;
                 ctx.lineCap = v.strokeRoundCap ? 'round' : 'butt';
                 ctx.lineWidth = Math.max(1, v.pathThicknessPx * this.view.scale);
-                this.strokePolyline(this.trail);
+                for (const run of runs) this.strokePolyline(run);
             }
             ctx.restore();
         }
