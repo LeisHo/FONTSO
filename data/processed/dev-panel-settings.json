@@ -22,8 +22,8 @@
   "devPanel": {
     "controls": {
       "sliderRasterEmHeight": 256,
-      "sliderWrapWidthPx": 900,
-      "sliderLineHeightEm": 1.25,
+      "sliderWrapWidthPx": 4000,
+      "sliderLineHeightEm": 3,
       "checkboxUseKerning": true,
       "sliderLetterSpacingUnits": 0,
       "checkboxAutoFit": true,
@@ -37,53 +37,53 @@
       "checkboxLayerNodes": true,
       "checkboxLayerTraversal": false,
       "checkboxLayerConnectors": true,
-      "checkboxLayerOrder": false,
+      "checkboxLayerOrder": true,
       "checkboxLayerRoutePoints": false,
       "checkboxLayerRouteOrder": false,
       "checkboxLayerDot": true,
       "checkboxLayerTween": true,
-      "checkboxPathThicknessEnabled": false,
-      "sliderPathThickness": 8,
+      "checkboxPathThicknessEnabled": true,
+      "sliderPathThickness": 6,
       "colorPathColor": "#31d67a",
-      "checkboxProgressiveThickness": false,
-      "checkboxAdaptiveThickness": false,
-      "checkboxStrokeRoundCap": false,
-      "checkboxPathTweenEnabled": false,
-      "sliderTweenProgression": 0.5,
-      "sliderTweenRadiusScale": 1,
-      "sliderTweenRadiusSmoothing": 2,
-      "sliderTweenNormalSmoothing": 2,
-      "sliderTweenResampleSpacing": 2,
+      "checkboxProgressiveThickness": true,
+      "checkboxAdaptiveThickness": true,
+      "checkboxStrokeRoundCap": true,
+      "checkboxPathTweenEnabled": true,
+      "sliderTweenProgression": 0.72,
+      "sliderTweenRadiusScale": 0.73,
+      "sliderTweenRadiusSmoothing": 12,
+      "sliderTweenNormalSmoothing": 12,
+      "sliderTweenResampleSpacing": 3,
       "sliderTweenExtendTerminals": 0,
       "checkboxTweenBothSides": true,
       "sliderTweenJoinProximity": 9,
       "checkboxTweenLoopSingleCurves": false,
       "checkboxTweenJoinIntersections": true,
       "selectTweenJoinStyle": "auto",
-      "sliderTweenJoinSharpAngle": 60,
-      "sliderTweenJoinCornerRadius": 4,
-      "sliderTweenJoinMiterLimit": 4,
-      "selectAnimationPath": "midline",
+      "sliderTweenJoinSharpAngle": 0,
+      "sliderTweenJoinCornerRadius": 4.5,
+      "sliderTweenJoinMiterLimit": 20,
+      "selectAnimationPath": "tween",
       "checkboxAnimLoop": true,
-      "sliderAnimSpeed": 220,
+      "sliderAnimSpeed": 130,
       "sliderAnimScrub": 0,
-      "sliderRasterPadding": 4,
-      "sliderAlphaThreshold": 128,
-      "selectThinningAlgorithm": "zhang-suen",
+      "sliderRasterPadding": 5,
+      "sliderAlphaThreshold": 240,
+      "selectThinningAlgorithm": "guo-hall",
       "checkboxRemoveRedundantPixels": true,
-      "sliderMaxThinningIterations": 400,
+      "sliderMaxThinningIterations": 2000,
       "checkboxRemoveIsolatedPixels": true,
-      "sliderMinSourceAreaPx": 24,
-      "sliderMinBranchLengthPx": 12,
-      "sliderPruneIterations": 3,
+      "sliderMinSourceAreaPx": 0,
+      "sliderMinBranchLengthPx": 0,
+      "sliderPruneIterations": 8,
       "checkboxMergeAdjacentJunctions": true,
-      "sliderSimplifyTolerancePx": 0.8,
-      "sliderSmoothingPasses": 1,
-      "sliderSmoothingStrength": 0.6,
+      "sliderSimplifyTolerancePx": 1.3,
+      "sliderSmoothingPasses": 6,
+      "sliderSmoothingStrength": 1,
       "checkboxPreserveEndpointsWhileSmoothing": true,
       "checkboxNearestRouting": true,
       "checkboxGroupByLetter": true,
-      "sliderRightwardBias": 1.5,
+      "sliderRightwardBias": 0,
       "checkboxTweenEntryAtEndpoints": true,
       "checkboxEmitConnectors": true,
       "sliderTraversalResampleSpacingPx": 2
@@ -92,7 +92,7 @@
       "left": 20,
       "top": 20,
       "width": 340,
-      "height": 520
+      "height": 671
     },
     "devPanelStyle": {
       "titleFontSize": 17,
@@ -1378,92 +1378,6 @@
           ]
         },
         {
-          "key": "desktop:Font & Character",
-          "items": [
-            {
-              "type": "row",
-              "key": "__row0"
-            },
-            {
-              "type": "row",
-              "key": "__row1"
-            },
-            {
-              "type": "row",
-              "key": "__row2"
-            },
-            {
-              "type": "row",
-              "key": "__row3"
-            },
-            {
-              "type": "row",
-              "key": "__row4"
-            },
-            {
-              "type": "row",
-              "key": "__row5"
-            },
-            {
-              "type": "row",
-              "key": "__row6"
-            },
-            {
-              "type": "row",
-              "key": "__row7"
-            }
-          ],
-          "rowKeys": [
-            "__row0",
-            "__row1",
-            "__row2",
-            "__row3",
-            "__row4",
-            "__row5",
-            "__row6",
-            "__row7"
-          ],
-          "subgroups": []
-        },
-        {
-          "key": "desktop:Text",
-          "items": [
-            {
-              "type": "row",
-              "key": "__row0"
-            },
-            {
-              "type": "row",
-              "key": "sliderRasterEmHeight"
-            },
-            {
-              "type": "row",
-              "key": "sliderWrapWidthPx"
-            },
-            {
-              "type": "row",
-              "key": "sliderLineHeightEm"
-            },
-            {
-              "type": "row",
-              "key": "checkboxUseKerning"
-            },
-            {
-              "type": "row",
-              "key": "sliderLetterSpacingUnits"
-            }
-          ],
-          "rowKeys": [
-            "__row0",
-            "sliderRasterEmHeight",
-            "sliderWrapWidthPx",
-            "sliderLineHeightEm",
-            "checkboxUseKerning",
-            "sliderLetterSpacingUnits"
-          ],
-          "subgroups": []
-        },
-        {
           "key": "desktop:View",
           "items": [
             {
@@ -1565,6 +1479,133 @@
           "subgroups": []
         },
         {
+          "key": "desktop:Font & Character",
+          "items": [
+            {
+              "type": "row",
+              "key": "__row0"
+            },
+            {
+              "type": "row",
+              "key": "__row1"
+            },
+            {
+              "type": "row",
+              "key": "__row2"
+            },
+            {
+              "type": "row",
+              "key": "__row3"
+            },
+            {
+              "type": "row",
+              "key": "__row4"
+            },
+            {
+              "type": "row",
+              "key": "__row5"
+            },
+            {
+              "type": "row",
+              "key": "__row6"
+            },
+            {
+              "type": "row",
+              "key": "__row7"
+            }
+          ],
+          "rowKeys": [
+            "__row0",
+            "__row1",
+            "__row2",
+            "__row3",
+            "__row4",
+            "__row5",
+            "__row6",
+            "__row7"
+          ],
+          "subgroups": []
+        },
+        {
+          "key": "desktop:Text",
+          "items": [
+            {
+              "type": "row",
+              "key": "__row0"
+            },
+            {
+              "type": "row",
+              "key": "sliderRasterEmHeight"
+            },
+            {
+              "type": "row",
+              "key": "sliderWrapWidthPx"
+            },
+            {
+              "type": "row",
+              "key": "sliderLineHeightEm"
+            },
+            {
+              "type": "row",
+              "key": "checkboxUseKerning"
+            },
+            {
+              "type": "row",
+              "key": "sliderLetterSpacingUnits"
+            }
+          ],
+          "rowKeys": [
+            "__row0",
+            "sliderRasterEmHeight",
+            "sliderWrapWidthPx",
+            "sliderLineHeightEm",
+            "checkboxUseKerning",
+            "sliderLetterSpacingUnits"
+          ],
+          "subgroups": []
+        },
+        {
+          "key": "desktop:Skeletonisation",
+          "items": [
+            {
+              "type": "row",
+              "key": "selectThinningAlgorithm"
+            },
+            {
+              "type": "row",
+              "key": "checkboxRemoveRedundantPixels"
+            },
+            {
+              "type": "row",
+              "key": "sliderMaxThinningIterations"
+            }
+          ],
+          "rowKeys": [
+            "selectThinningAlgorithm",
+            "checkboxRemoveRedundantPixels",
+            "sliderMaxThinningIterations"
+          ],
+          "subgroups": []
+        },
+        {
+          "key": "desktop:Rasterisation",
+          "items": [
+            {
+              "type": "row",
+              "key": "sliderRasterPadding"
+            },
+            {
+              "type": "row",
+              "key": "sliderAlphaThreshold"
+            }
+          ],
+          "rowKeys": [
+            "sliderRasterPadding",
+            "sliderAlphaThreshold"
+          ],
+          "subgroups": []
+        },
+        {
           "key": "desktop:Path",
           "items": [
             {
@@ -1599,6 +1640,59 @@
             "colorPathColor",
             "checkboxProgressiveThickness",
             "checkboxAdaptiveThickness"
+          ],
+          "subgroups": []
+        },
+        {
+          "key": "desktop:Cleanup",
+          "items": [
+            {
+              "type": "row",
+              "key": "checkboxRemoveIsolatedPixels"
+            },
+            {
+              "type": "row",
+              "key": "sliderMinSourceAreaPx"
+            },
+            {
+              "type": "row",
+              "key": "sliderMinBranchLengthPx"
+            },
+            {
+              "type": "row",
+              "key": "sliderPruneIterations"
+            },
+            {
+              "type": "row",
+              "key": "checkboxMergeAdjacentJunctions"
+            },
+            {
+              "type": "row",
+              "key": "sliderSimplifyTolerancePx"
+            },
+            {
+              "type": "row",
+              "key": "sliderSmoothingPasses"
+            },
+            {
+              "type": "row",
+              "key": "sliderSmoothingStrength"
+            },
+            {
+              "type": "row",
+              "key": "checkboxPreserveEndpointsWhileSmoothing"
+            }
+          ],
+          "rowKeys": [
+            "checkboxRemoveIsolatedPixels",
+            "sliderMinSourceAreaPx",
+            "sliderMinBranchLengthPx",
+            "sliderPruneIterations",
+            "checkboxMergeAdjacentJunctions",
+            "sliderSimplifyTolerancePx",
+            "sliderSmoothingPasses",
+            "sliderSmoothingStrength",
+            "checkboxPreserveEndpointsWhileSmoothing"
           ],
           "subgroups": []
         },
@@ -1720,100 +1814,6 @@
             "checkboxAnimLoop",
             "sliderAnimSpeed",
             "sliderAnimScrub"
-          ],
-          "subgroups": []
-        },
-        {
-          "key": "desktop:Rasterisation",
-          "items": [
-            {
-              "type": "row",
-              "key": "sliderRasterPadding"
-            },
-            {
-              "type": "row",
-              "key": "sliderAlphaThreshold"
-            }
-          ],
-          "rowKeys": [
-            "sliderRasterPadding",
-            "sliderAlphaThreshold"
-          ],
-          "subgroups": []
-        },
-        {
-          "key": "desktop:Skeletonisation",
-          "items": [
-            {
-              "type": "row",
-              "key": "selectThinningAlgorithm"
-            },
-            {
-              "type": "row",
-              "key": "checkboxRemoveRedundantPixels"
-            },
-            {
-              "type": "row",
-              "key": "sliderMaxThinningIterations"
-            }
-          ],
-          "rowKeys": [
-            "selectThinningAlgorithm",
-            "checkboxRemoveRedundantPixels",
-            "sliderMaxThinningIterations"
-          ],
-          "subgroups": []
-        },
-        {
-          "key": "desktop:Cleanup",
-          "items": [
-            {
-              "type": "row",
-              "key": "checkboxRemoveIsolatedPixels"
-            },
-            {
-              "type": "row",
-              "key": "sliderMinSourceAreaPx"
-            },
-            {
-              "type": "row",
-              "key": "sliderMinBranchLengthPx"
-            },
-            {
-              "type": "row",
-              "key": "sliderPruneIterations"
-            },
-            {
-              "type": "row",
-              "key": "checkboxMergeAdjacentJunctions"
-            },
-            {
-              "type": "row",
-              "key": "sliderSimplifyTolerancePx"
-            },
-            {
-              "type": "row",
-              "key": "sliderSmoothingPasses"
-            },
-            {
-              "type": "row",
-              "key": "sliderSmoothingStrength"
-            },
-            {
-              "type": "row",
-              "key": "checkboxPreserveEndpointsWhileSmoothing"
-            }
-          ],
-          "rowKeys": [
-            "checkboxRemoveIsolatedPixels",
-            "sliderMinSourceAreaPx",
-            "sliderMinBranchLengthPx",
-            "sliderPruneIterations",
-            "checkboxMergeAdjacentJunctions",
-            "sliderSimplifyTolerancePx",
-            "sliderSmoothingPasses",
-            "sliderSmoothingStrength",
-            "checkboxPreserveEndpointsWhileSmoothing"
           ],
           "subgroups": []
         },
@@ -2437,18 +2437,6 @@
           ]
         },
         {
-          "key": "mobile:Font & Character",
-          "items": [],
-          "rowKeys": [],
-          "subgroups": []
-        },
-        {
-          "key": "mobile:Text",
-          "items": [],
-          "rowKeys": [],
-          "subgroups": []
-        },
-        {
           "key": "mobile:View",
           "items": [],
           "rowKeys": [],
@@ -2461,7 +2449,37 @@
           "subgroups": []
         },
         {
+          "key": "mobile:Font & Character",
+          "items": [],
+          "rowKeys": [],
+          "subgroups": []
+        },
+        {
+          "key": "mobile:Text",
+          "items": [],
+          "rowKeys": [],
+          "subgroups": []
+        },
+        {
+          "key": "mobile:Skeletonisation",
+          "items": [],
+          "rowKeys": [],
+          "subgroups": []
+        },
+        {
+          "key": "mobile:Rasterisation",
+          "items": [],
+          "rowKeys": [],
+          "subgroups": []
+        },
+        {
           "key": "mobile:Path",
+          "items": [],
+          "rowKeys": [],
+          "subgroups": []
+        },
+        {
+          "key": "mobile:Cleanup",
           "items": [],
           "rowKeys": [],
           "subgroups": []
@@ -2474,24 +2492,6 @@
         },
         {
           "key": "mobile:Animation",
-          "items": [],
-          "rowKeys": [],
-          "subgroups": []
-        },
-        {
-          "key": "mobile:Rasterisation",
-          "items": [],
-          "rowKeys": [],
-          "subgroups": []
-        },
-        {
-          "key": "mobile:Skeletonisation",
-          "items": [],
-          "rowKeys": [],
-          "subgroups": []
-        },
-        {
-          "key": "mobile:Cleanup",
           "items": [],
           "rowKeys": [],
           "subgroups": []
@@ -3084,18 +3084,6 @@
           ]
         },
         {
-          "key": "landscape:Font & Character",
-          "items": [],
-          "rowKeys": [],
-          "subgroups": []
-        },
-        {
-          "key": "landscape:Text",
-          "items": [],
-          "rowKeys": [],
-          "subgroups": []
-        },
-        {
           "key": "landscape:View",
           "items": [],
           "rowKeys": [],
@@ -3108,7 +3096,37 @@
           "subgroups": []
         },
         {
+          "key": "landscape:Font & Character",
+          "items": [],
+          "rowKeys": [],
+          "subgroups": []
+        },
+        {
+          "key": "landscape:Text",
+          "items": [],
+          "rowKeys": [],
+          "subgroups": []
+        },
+        {
+          "key": "landscape:Skeletonisation",
+          "items": [],
+          "rowKeys": [],
+          "subgroups": []
+        },
+        {
+          "key": "landscape:Rasterisation",
+          "items": [],
+          "rowKeys": [],
+          "subgroups": []
+        },
+        {
           "key": "landscape:Path",
+          "items": [],
+          "rowKeys": [],
+          "subgroups": []
+        },
+        {
+          "key": "landscape:Cleanup",
           "items": [],
           "rowKeys": [],
           "subgroups": []
@@ -3126,24 +3144,6 @@
           "subgroups": []
         },
         {
-          "key": "landscape:Rasterisation",
-          "items": [],
-          "rowKeys": [],
-          "subgroups": []
-        },
-        {
-          "key": "landscape:Skeletonisation",
-          "items": [],
-          "rowKeys": [],
-          "subgroups": []
-        },
-        {
-          "key": "landscape:Cleanup",
-          "items": [],
-          "rowKeys": [],
-          "subgroups": []
-        },
-        {
           "key": "landscape:Traversal",
           "items": [],
           "rowKeys": [],
@@ -3153,30 +3153,30 @@
     },
     "sectionCollapseState": {
       "desktop:Saved Dev Settings": false,
-      "desktop:Dev Panel": false,
-      "desktop:MECHANICS": false,
-      "desktop:PANEL UI": false,
-      "desktop:TEXT": false,
-      "desktop:Dev Panel Title": false,
-      "desktop:Group Title": false,
-      "desktop:Setting Title": false,
-      "desktop:TABS": false,
-      "desktop:BUTTONS": false,
-      "desktop:Debug": false,
-      "desktop:Mouse Log": false,
-      "desktop:Pipeline Report": false,
-      "desktop:Path Data (JSON)": false,
+      "desktop:Dev Panel": true,
+      "desktop:MECHANICS": true,
+      "desktop:PANEL UI": true,
+      "desktop:TEXT": true,
+      "desktop:Dev Panel Title": true,
+      "desktop:Group Title": true,
+      "desktop:Setting Title": true,
+      "desktop:TABS": true,
+      "desktop:BUTTONS": true,
+      "desktop:Debug": true,
+      "desktop:Mouse Log": true,
+      "desktop:Pipeline Report": true,
+      "desktop:Path Data (JSON)": true,
+      "desktop:View": true,
+      "desktop:Layers": true,
       "desktop:Font & Character": false,
-      "desktop:Text": false,
-      "desktop:View": false,
-      "desktop:Layers": false,
-      "desktop:Path": false,
+      "desktop:Text": true,
+      "desktop:Skeletonisation": true,
+      "desktop:Rasterisation": true,
+      "desktop:Path": true,
+      "desktop:Cleanup": true,
       "desktop:Path Tween": false,
-      "desktop:Animation": false,
-      "desktop:Rasterisation": false,
-      "desktop:Skeletonisation": false,
-      "desktop:Cleanup": false,
-      "desktop:Traversal": false,
+      "desktop:Animation": true,
+      "desktop:Traversal": true,
       "mobile:Dev Panel": false,
       "mobile:MECHANICS": false,
       "mobile:PANEL UI": false,
@@ -3189,16 +3189,16 @@
       "mobile:Debug": false,
       "mobile:Pipeline Report": false,
       "mobile:Path Data (JSON)": false,
-      "mobile:Font & Character": false,
-      "mobile:Text": false,
       "mobile:View": false,
       "mobile:Layers": false,
+      "mobile:Font & Character": false,
+      "mobile:Text": false,
+      "mobile:Skeletonisation": false,
+      "mobile:Rasterisation": false,
       "mobile:Path": false,
+      "mobile:Cleanup": false,
       "mobile:Path Tween": false,
       "mobile:Animation": false,
-      "mobile:Rasterisation": false,
-      "mobile:Skeletonisation": false,
-      "mobile:Cleanup": false,
       "mobile:Traversal": false,
       "landscape:Dev Panel": false,
       "landscape:MECHANICS": false,
@@ -3212,16 +3212,16 @@
       "landscape:Debug": false,
       "landscape:Pipeline Report": false,
       "landscape:Path Data (JSON)": false,
-      "landscape:Font & Character": false,
-      "landscape:Text": false,
       "landscape:View": false,
       "landscape:Layers": false,
+      "landscape:Font & Character": false,
+      "landscape:Text": false,
+      "landscape:Skeletonisation": false,
+      "landscape:Rasterisation": false,
       "landscape:Path": false,
+      "landscape:Cleanup": false,
       "landscape:Path Tween": false,
       "landscape:Animation": false,
-      "landscape:Rasterisation": false,
-      "landscape:Skeletonisation": false,
-      "landscape:Cleanup": false,
       "landscape:Traversal": false
     },
     "devTextOverrides": {
@@ -3303,7 +3303,13 @@
       "landscape:TEXT": null
     },
     "devTextOverridesManual": [],
-    "lockedGroups": [],
+    "lockedGroups": [
+      "desktop:Text",
+      "desktop:Font & Character",
+      "desktop:Debug",
+      "desktop:Dev Panel",
+      "desktop:View"
+    ],
     "textEditModeEnabled": false,
     "devVisibility": {},
     "devIndependence": {
@@ -3438,7 +3444,7 @@
       }
     ]
   },
-  "lastSaveStamp": "1790154633385-ivwph7sj",
+  "lastSaveStamp": "1790156007728-lq0tq6qm",
   "fontSettings": {
     "Gelasio-Regular": {
       "memory": {
