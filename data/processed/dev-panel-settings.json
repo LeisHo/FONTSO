@@ -32,6 +32,8 @@
       "checkboxLayerTraversal": false,
       "checkboxLayerConnectors": true,
       "checkboxLayerOrder": false,
+      "checkboxLayerRoutePoints": false,
+      "checkboxLayerRouteOrder": false,
       "checkboxLayerDot": true,
       "checkboxLayerTween": true,
       "checkboxPathThicknessEnabled": false,
@@ -39,6 +41,7 @@
       "colorPathColor": "#31d67a",
       "checkboxProgressiveThickness": false,
       "checkboxAdaptiveThickness": false,
+      "checkboxStrokeRoundCap": false,
       "checkboxPathTweenEnabled": false,
       "sliderTweenProgression": 0.5,
       "sliderTweenRadiusScale": 1,
@@ -1470,6 +1473,14 @@
           "items": [
             {
               "type": "row",
+              "key": "checkboxLayerRoutePoints"
+            },
+            {
+              "type": "row",
+              "key": "checkboxLayerRouteOrder"
+            },
+            {
+              "type": "row",
               "key": "checkboxLayerGlyphFill"
             },
             {
@@ -1518,6 +1529,8 @@
             }
           ],
           "rowKeys": [
+            "checkboxLayerRoutePoints",
+            "checkboxLayerRouteOrder",
             "checkboxLayerGlyphFill",
             "checkboxLayerGlyphOutline",
             "checkboxLayerMask",
@@ -1536,6 +1549,10 @@
         {
           "key": "desktop:Path",
           "items": [
+            {
+              "type": "row",
+              "key": "checkboxStrokeRoundCap"
+            },
             {
               "type": "row",
               "key": "checkboxPathThicknessEnabled"
@@ -1558,6 +1575,7 @@
             }
           ],
           "rowKeys": [
+            "checkboxStrokeRoundCap",
             "checkboxPathThicknessEnabled",
             "sliderPathThickness",
             "colorPathColor",
@@ -3268,5 +3286,6 @@
       "mobile": {},
       "landscape": {}
     }
-  }
+  },
+  "learnedOrders": {}
 }
