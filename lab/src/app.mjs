@@ -938,43 +938,25 @@ window.renderFontLabDevGroups = function renderFontLabDevGroups() {
 const SETTINGS_ENDPOINT = '/api/save-settings';
 const FONT_DIR = 'data/processed/fonts/';
 
-// Client half of §12l's shared secret.
+// Client half of §12l's shared secret. Same mechanism as every other
+// project in this workspace (HANDYSET/src/main.js, HANDY DANDIES/src/
+// main.js): a plain constant, filled in by hand, never read from a file
+// at runtime.
 //
-// PER-DEVICE, IN localStorage - NOT a constant in this file. This file is
-// served verbatim to every visitor and committed to a PUBLIC repo, so a
-// hardcoded value would be readable by anyone and would not be a secret at
-// all; it would only look like one. Kept in localStorage it never enters
-// the repo, never reaches another visitor, and still authorises this
-// browser's own writes.
+// This is NOT the GitHub token. The token can read and write repositories
+// and lives only in Vercel's environment; it never enters this file, never
+// reaches the browser, and cannot be extracted from the deployed page.
+// This value is a doorbell password for /api/save-settings alone. The
+// browser has to send it, so the browser has to know it, so on a public
+// repo it is readable by anyone who looks - and the deliberate design
+// consequence is that the capability behind it is narrow: it can write to
+// one file path in one repository and nothing else. It is not a route to
+// the token or to any other repo.
 //
-// Set it once per browser from the console:
-//     fontLab.setSaveSecret('<the value from Vercel>')
-// and check with fontLab.hasSaveSecret(). Clear it with setSaveSecret(null).
-const SAVE_SECRET_KEY = 'fontso.devPanelSaveSecret';
-
-function getSaveSecret() {
-    // Wrapped: localStorage throws in a private window or with site data
-    // blocked, and a save that cannot read its secret should degrade to an
-    // unauthorised save attempt, not take the whole page down.
-    try {
-        return window.localStorage.getItem(SAVE_SECRET_KEY) || '';
-    } catch {
-        return '';
-    }
-}
-
-function setSaveSecret(value) {
-    try {
-        if (value === null || value === undefined || value === '') {
-            window.localStorage.removeItem(SAVE_SECRET_KEY);
-            return 'cleared';
-        }
-        window.localStorage.setItem(SAVE_SECRET_KEY, String(value).trim());
-        return 'set for this browser';
-    } catch (e) {
-        return 'FAILED: ' + ((e && e.message) || e);
-    }
-}
+// Empty means "no remote writes from this build", which is a supported
+// mode, not a failure: Save falls back to localStorage and everything
+// else works. A save attempted with the wrong value returns 401.
+const DEV_PANEL_SAVE_SECRET = '';
 
 async function remoteGetSettings() {
     try {
@@ -994,8 +976,7 @@ async function remoteSave({ patch = {}, files = [] } = {}) {
     try {
         const current = (await remoteGetSettings()) || {};
         const headers = { 'Content-Type': 'application/json' };
-        const secret = getSaveSecret();
-        if (secret) headers['x-dev-panel-secret'] = secret;
+        if (DEV_PANEL_SAVE_SECRET) headers['x-dev-panel-secret'] = DEV_PANEL_SAVE_SECRET;
         const resp = await fetch(SETTINGS_ENDPOINT, {
             method: 'POST',
             headers,
@@ -1389,6 +1370,4 @@ renderer.draw();
 // Exposed deliberately: this is a laboratory. Being able to poke the
 // pipeline from the console — re-run with different config, dump a
 // result, diff two fonts — is a feature, not a leak.
-window.fontLab = {
-    setSaveSecret,
-    hasSaveSecret: () => !!getSaveSecret(), state, renderer, animator, viewport, rerun, runPipeline, toDebugJSON, loadFontFromUrl };
+window.fontLab = { state, renderer, animator, viewport, rerun, runPipeline, toDebugJSON, loadFontFromUrl };

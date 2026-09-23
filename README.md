@@ -109,21 +109,22 @@ function) and set, in that Vercel project's own environment variables:
 | `GITHUB_BRANCH` | Optional, defaults to `main`. |
 | `SETTINGS_FILE_PATH` | Optional, defaults to `data/processed/dev-panel-settings.json`. |
 
-Then give each browser the same secret **once**, from the console on the
-deployed page:
+Then paste the same value into `DEV_PANEL_SAVE_SECRET` at the top of the
+settings section in `lab/src/app.mjs` (line 959) — the same plain constant
+every other project in this workspace uses (`HANDYSET/src/main.js:2331`,
+`HANDY DANDIES/src/main.js:1452`).
 
-```
-fontLab.setSaveSecret('<the DEV_PANEL_SAVE_SECRET value>')
-```
+**`GITHUB_TOKEN` is not this value and never goes in a file.** It can read
+and write repositories, lives only in Vercel's environment, and never
+reaches the browser. `DEV_PANEL_SAVE_SECRET` is only a doorbell password
+for `/api/save-settings`; the browser has to send it, so it cannot be
+hidden from the browser. On a public repo it is therefore readable by
+anyone who looks, and the capability behind it is deliberately narrow: it
+can write to one file path in one repository and is not a route to the
+token or to any other repo.
 
-It is stored per-device in `localStorage`, never in a committed file. This
-is deliberate: `lab/src/app.mjs` is served to every visitor and lives in a
-public repo, so a hardcoded constant there would be readable by anyone and
-would only *look* like a secret. Check with `fontLab.hasSaveSecret()` and
-clear with `fontLab.setSaveSecret(null)`.
-
-Until that is done, Save writes to `localStorage` only — a supported mode,
-not a failure. A save attempt without the secret returns `401
+Until it is filled in, Save writes to `localStorage` only — a supported
+mode, not a failure. A save attempt with a wrong value returns `401
 Unauthorized`; a `500 Server not configured` means a Vercel environment
 variable is missing instead, and the message names which.
 
