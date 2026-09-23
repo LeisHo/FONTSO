@@ -1449,6 +1449,92 @@ one, so a pass cannot be vacuous. Live re-check in the browser: pipeline
 unaffected, 5 stops on Comic Sans 'H', no console errors.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  3:53 AM - 4:06 AM
+
+Two things: a false-negative save message, and per-font settings.
+
+THE SAVE MESSAGE. Reported as seen ON VERCEL, contradicting the previous
+entry's conclusion that the symptom meant localhost. That conclusion was
+too narrow - verifying saving works on the deployment does not establish
+that a particular failure was local.
+
+Ruled out by measurement: a competing SYNC handler (only one exists),
+payload size (a 3.2MB POST writing six files committed fine), and the
+endpoint itself (repeated successful commits).
+
+The real mechanism: remoteSave wraps the POST in a try/catch and reports
+failure on any thrown error. A request that REACHES GitHub and commits,
+then loses its response to a dropped connection or a serverless timeout,
+lands the commit and still reports 'remote save unavailable'. Exactly
+the reported symptom.
+
+Every save now carries a unique stamp, and an apparent failure is
+CHECKED rather than believed: the document is re-read and, if it carries
+this attempt's own stamp, the write demonstrably landed and is reported
+as saved with the caveat that the confirmation was lost. Pending fonts
+are marked saved on that path too, so a later Sync does not re-upload
+bytes already committed.
+
+Verified on the live deployment by simulating the exact failure - let
+the POST through to commit, then throw so the client believes it failed.
+Message read: 'Saved to the repo - the confirmation was lost in transit,
+but the write landed.'
+
+Also removed six stress-test font artefacts (~3MB) this investigation
+pushed into the repo, and their manifest entries.
+
+PER-FONT SETTINGS AND PRESETS. New module fontPresets.mjs. A font now
+remembers two distinct things: MEMORY (what was on screen last time it
+was used, restored automatically on switch, no management) and PRESETS
+(named snapshots, managed with Use/Save/Rename/Delete).
+
+In scope: Text, Rasterisation, Skeletonisation, Cleanup, Path, Path
+Tween. NOT Traversal, View, Layers or Animation - the first group
+describes how a glyph becomes geometry, which genuinely differs per
+typeface; the rest describe how you are looking at it, which does not,
+and a zoom level following the font around would be a nuisance.
+
+Keys are listed EXPLICITLY rather than captured wholesale, so a new
+config key must be classified deliberately. A blanket capture would
+silently start carrying anything added later, and the failure would be
+invisible until a font switch moved something unexpected.
+
+Memory is banked at the MOMENT OF SWITCHING, not on every edit: writing
+on each slider tick would be constant churn, and the only moment the
+value is needed is the moment it is about to be replaced. A font seen
+for the first time keeps whatever is on screen, which becomes its
+memory - a sane start rather than a reset to defaults.
+
+The list is a native multi-select with CSS `resize: vertical`: shift-
+click ranges, ctrl-click, keyboard navigation and a drag handle all come
+free, where a hand-rolled list would have to reimplement each and would
+get keyboard behaviour wrong.
+
+Naming rule implemented as specified: the default offered increments the
+LAST number in the previous name IN PLACE, preserving the chosen format
+and its zero padding, or appends ' - 2' when there is no number.
+Verified: '' -> 'Preset', 'Preset' -> 'Preset - 2', 'Preset - 2' ->
+'Preset - 3', 'Bold 3 Pass' -> 'Bold 4 Pass', 'Run 09' -> 'Run 10',
+'Preset - 9' -> 'Preset - 10'.
+
+Verified (live, real browser):
+- Empty state reads 'load a font first'; after a font loads, 'no presets
+  for this font yet'.
+- Save offers 'Preset', then 'Preset - 2' on the second save.
+- PRESETS ARE PER FONT: with two saved under Comic Sans, switching to
+  Tinos shows 'no presets for this font yet', and switching back shows
+  both again.
+- MEMORY WORKS: rasterEmHeight 320 + simplifyTolerance 2.5 set under
+  Comic Sans, switched to Tinos and changed to 128, switched back - both
+  original values restored.
+- Use: settings moved to 96, preset applied, back to 320, AND the
+  slider's own displayed value followed (320), so the panel and the
+  render do not disagree.
+- Rename: 'Preset' -> 'Comic Heavy'.
+- Delete with a 2-item shift-selection: confirm text named both, both
+  removed, list back to the empty placeholder.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

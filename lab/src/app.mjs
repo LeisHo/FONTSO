@@ -31,6 +31,10 @@ import {
     rasterBounds, toLearnedOrder, bestLearnedOrder, readLearned, writeLearned,
 } from './routeOrder.mjs';
 import {
+    captureSettings, applySettings, nextPresetName, uniqueName,
+    listPresets, readEntry, writeMemory, addPreset, renamePreset, deletePresets,
+} from './fontPresets.mjs';
+import {
     rememberFont, getFont, listFonts, unsavedFonts, markSaved,
     bytesToBase64, base64ToBytes, adoptSavedFont, keyForFileName,
 } from './fontStore.mjs';
@@ -63,6 +67,13 @@ const state = {
     learnedOrders: {},
     // Result of the last learned-order match, for the status line.
     learnedMatch: null,
+    // { [fontKey]: { memory, presets[] } }. Persisted by Sync.
+    fontSettings: {},
+    // The font whose settings are currently on screen, so a switch can
+    // bank the OUTGOING font's state before loading the incoming one.
+    activeFontKey: null,
+    // Name of the last preset saved, for the next default name.
+    lastPresetName: '',
     // The string to render. A single character is just the one-character
     // case; the pipeline does not distinguish them.
     text: 'A',
@@ -224,6 +235,42 @@ function buildFontGroup() {
         input.multiple = true;
         input.addEventListener('change', onFontFileChosen);
         row.appendChild(input);
+    });
+
+    // Saved Fonts Presets. A native multi-select: it gives shift-click
+    // range selection and ctrl-click for free, and CSS `resize` makes it
+    // draggable - a hand-rolled list would have to reimplement both and
+    // would get keyboard navigation wrong.
+    customRow(content, (row) => {
+        const label = document.createElement('span');
+        label.className = 'dev-label';
+        label.textContent = 'Saved Fonts Presets:';
+        const list = document.createElement('select');
+        list.multiple = true;
+        list.size = 6;
+        list.className = 'dev-select lab-preset-list';
+        ui.presetList = list;
+        row.append(label, list);
+        // Populate immediately: refreshPresetList otherwise runs only on
+        // a font load, leaving an empty box with no explanation before
+        // one is picked.
+        refreshPresetList();
+    });
+
+    customRow(content, (row) => {
+        const mk = (text, fn, title) => {
+            const b = document.createElement('button');
+            b.textContent = text;
+            b.title = title;
+            b.addEventListener('click', fn);
+            return b;
+        };
+        row.append(
+            mk('Use', () => usePreset(), 'Apply the selected preset'),
+            mk('Save', () => savePreset(), 'Save the current settings as a new preset'),
+            mk('Rename', () => renameSelectedPreset(), 'Rename the selected preset'),
+            mk('Delete', () => deleteSelectedPresets(), 'Delete the selected preset(s)'),
+        );
     });
 
     // Local test fonts. Populated asynchronously; degrades to a disabled
@@ -536,6 +583,25 @@ function syncConfigControlsFromState(editedId) {
             else if (String(el.value) !== String(value)) el.value = value;
         }
     }
+}
+
+// syncConfigControlsFromState covers config keys only, which is all the
+// delegated listener needs. Applying a whole snapshot also has to push
+// view and tween values back into their controls, or the panel would
+// show the old numbers while the render used the new ones.
+function syncAllControlsFromState() {
+    syncConfigControlsFromState(null);
+    const push = (id, value) => {
+        for (const variant of [id, twinId(id, 'Mobile'), twinId(id, 'Landscape')]) {
+            if (!variant) continue;
+            const el = document.getElementById(variant);
+            if (!el) continue;
+            if (el.type === 'checkbox') el.checked = !!value;
+            else if (String(el.value) !== String(value)) el.value = value;
+        }
+    };
+    for (const [id, key] of Object.entries(VIEW_BY_CONTROL_ID)) push(id, state.view[key]);
+    for (const [id, key] of Object.entries(TWEEN_BY_CONTROL_ID)) push(id, state.tween[key]);
 }
 
 function twinId(id, device) {
@@ -1200,7 +1266,16 @@ async function syncToRemote() {
     // comes back carrying this exact value, the commit happened no
     // matter what the POST appeared to do.
     const saveStamp = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    const patch = { importedFonts: manifest, learnedOrders: state.learnedOrders, lastSaveStamp: saveStamp };
+    // Bank the live font's settings first, so Sync stores what is on
+    // screen rather than whatever was last banked at a font switch.
+    bankCurrentFontSettings();
+
+    const patch = {
+        importedFonts: manifest,
+        learnedOrders: state.learnedOrders,
+        fontSettings: state.fontSettings,
+        lastSaveStamp: saveStamp,
+    };
     if (typeof window.captureFullDevPanelState === 'function') {
         patch.devPanel = window.captureFullDevPanelState();
     }
@@ -1243,6 +1318,10 @@ async function restoreSavedFonts(select) {
     // already apply them.
     if (settings && settings.learnedOrders && typeof settings.learnedOrders === 'object') {
         state.learnedOrders = { ...state.learnedOrders, ...settings.learnedOrders };
+    }
+    if (settings && settings.fontSettings && typeof settings.fontSettings === 'object') {
+        state.fontSettings = { ...state.fontSettings, ...settings.fontSettings };
+        refreshPresetList();
     }
     const manifest = (settings && settings.importedFonts) || [];
     if (!manifest.length) return;
@@ -1409,13 +1488,131 @@ async function onLocalFontChosen(e) {
 }
 
 function adoptFont(font, info) {
+    // Bank the OUTGOING font's settings before anything changes, so
+    // switching away and back returns you to where you were. Done here
+    // rather than on every edit: capturing on each slider tick would
+    // write constantly for no benefit, and the only moment the value is
+    // actually needed is the moment it is about to be replaced.
+    bankCurrentFontSettings();
+
     state.font = font;
     state.fontInfo = info;
+    state.activeFontKey = fontKeyOf(info);
+
+    // Restore this font's own settings, if it has any. A font seen for
+    // the first time keeps whatever is on screen, which then becomes its
+    // memory - a sane starting point rather than a reset to defaults.
+    const entry = readEntry(state.fontSettings, info);
+    if (entry.memory) {
+        applySettings(state, entry.memory);
+        syncAllControlsFromState();
+        renderer.setViewSettings(state.view);
+    }
+    refreshPresetList();
+
     if (ui.fontName) {
         ui.fontName.textContent = `${info.fullName} · ${info.unitsPerEm} upm · ${info.numGlyphs} glyphs · ${info.outlinesFormat}`;
         ui.fontName.className = 'lab-status ok';
     }
     rerun();
+}
+
+function fontKeyOf(info) {
+    return (info && (info.postScriptName || info.fullName || info.sourceName)) || null;
+}
+
+function bankCurrentFontSettings() {
+    if (!state.fontInfo || !state.activeFontKey) return;
+    state.fontSettings = writeMemory(state.fontSettings, state.fontInfo, captureSettings(state));
+}
+
+// ---- Font presets ---------------------------------------------------
+
+function selectedPresetNames() {
+    const list = ui.presetList;
+    if (!list) return [];
+    return [...list.selectedOptions].map((o) => o.value);
+}
+
+function refreshPresetList() {
+    const list = ui.presetList;
+    if (!list) return;
+    const keep = new Set(selectedPresetNames());
+    const presets = state.fontInfo ? listPresets(state.fontSettings, state.fontInfo) : [];
+    list.innerHTML = '';
+    for (const p of presets) {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        if (keep.has(p.name)) opt.selected = true;
+        list.appendChild(opt);
+    }
+    if (!presets.length) {
+        const opt = document.createElement('option');
+        opt.disabled = true;
+        opt.textContent = state.fontInfo ? 'no presets for this font yet' : 'load a font first';
+        list.appendChild(opt);
+    }
+}
+
+function usePreset() {
+    const names = selectedPresetNames();
+    if (names.length !== 1) {
+        setStatus('Select exactly one preset to use.', 'warn');
+        return;
+    }
+    const preset = listPresets(state.fontSettings, state.fontInfo).find((p) => p.name === names[0]);
+    if (!preset) { setStatus('That preset no longer exists.', 'warn'); return; }
+    applySettings(state, preset.settings);
+    syncAllControlsFromState();
+    renderer.setViewSettings(state.view);
+    bankCurrentFontSettings();
+    rerun();
+    setStatus(`Using preset "${preset.name}".`, 'ok');
+}
+
+function savePreset() {
+    if (!state.fontInfo) { setStatus('Load a font before saving a preset.', 'warn'); return; }
+    const existing = listPresets(state.fontSettings, state.fontInfo).map((p) => p.name);
+    // Default offered from the last preset SAVED, per the naming rule;
+    // falling back to the last in this font's list when this is a fresh
+    // session and nothing has been saved yet.
+    const seed = state.lastPresetName || existing[existing.length - 1] || '';
+    const suggested = uniqueName(existing, nextPresetName(seed));
+    const name = window.prompt('Name this preset:', suggested);
+    if (name === null) return;             // cancelled
+    const finalName = uniqueName(existing, name);
+    state.fontSettings = addPreset(state.fontSettings, state.fontInfo, finalName, captureSettings(state));
+    state.lastPresetName = finalName;
+    refreshPresetList();
+    setStatus(`Saved preset "${finalName}".`, 'ok');
+}
+
+function renameSelectedPreset() {
+    const names = selectedPresetNames();
+    if (names.length !== 1) { setStatus('Select exactly one preset to rename.', 'warn'); return; }
+    const existing = listPresets(state.fontSettings, state.fontInfo).map((p) => p.name);
+    const name = window.prompt('Rename preset:', names[0]);
+    if (name === null) return;
+    const trimmed = String(name).trim();
+    if (!trimmed || trimmed === names[0]) return;
+    // Uniqueness is checked against the OTHER names, so renaming a
+    // preset to something it already nearly was does not get a number
+    // appended because of a clash with itself.
+    const finalName = uniqueName(existing.filter((n) => n !== names[0]), trimmed);
+    state.fontSettings = renamePreset(state.fontSettings, state.fontInfo, names[0], finalName);
+    if (state.lastPresetName === names[0]) state.lastPresetName = finalName;
+    refreshPresetList();
+    setStatus(`Renamed to "${finalName}".`, 'ok');
+}
+
+function deleteSelectedPresets() {
+    const names = selectedPresetNames();
+    if (!names.length) { setStatus('Select one or more presets to delete.', 'warn'); return; }
+    if (!window.confirm(`Delete ${names.length} preset(s)?\n\n${names.join('\n')}`)) return;
+    state.fontSettings = deletePresets(state.fontSettings, state.fontInfo, names);
+    refreshPresetList();
+    setStatus(`Deleted ${names.length} preset(s).`, 'ok');
 }
 
 // Populates the font picker from every font folder the server can see.
