@@ -708,6 +708,18 @@ function buildTweenGroup() {
             label: 'Both Sides On/Off', value: state.tween.bothSides,
         }),
         addRow(GROUPS.TWEEN, {
+            id: 'sliderTweenJoinProximity', type: 'slider', label: 'Join Proximity (Px)',
+            // 0 disables proximity welding entirely. The top of the
+            // range is about a Comic Sans stem at the default raster -
+            // past that, ends that are genuinely unrelated start getting
+            // welded to each other.
+            min: 0, max: 30, step: 0.5, value: state.tween.joinProximityPx,
+        }),
+        addRow(GROUPS.TWEEN, {
+            id: 'checkboxTweenLoopSingleCurves', type: 'checkbox',
+            label: 'Loop Single Curves On/Off', value: state.tween.loopSingleCurves,
+        }),
+        addRow(GROUPS.TWEEN, {
             id: 'checkboxTweenJoinIntersections', type: 'checkbox',
             label: 'Join Intersecting Curves On/Off', value: state.tween.joinIntersections,
         }),
@@ -752,6 +764,8 @@ const TWEEN_BY_CONTROL_ID = {
     sliderTweenExtendTerminals: 'extendTerminalsPx',
     checkboxTweenBothSides: 'bothSides',
     checkboxTweenJoinIntersections: 'joinIntersections',
+    checkboxTweenLoopSingleCurves: 'loopSingleCurves',
+    sliderTweenJoinProximity: 'joinProximityPx',
     selectTweenJoinStyle: 'joinStyle',
     sliderTweenJoinSharpAngle: 'joinSharpAngleDeg',
     sliderTweenJoinCornerRadius: 'joinCornerRadiusPx',

@@ -1627,6 +1627,75 @@ Remaining, unchanged and already documented: the dark caps at stroke
 terminals are the thinning erosion on the Limitations list, not this.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  4:28 AM - 4:42 AM
+
+Two requests: a Loop Single Curves control, and "multiple curves that
+intersect that dont join".
+
+LOOP SINGLE CURVES (Path Tween group). An offset curve self-intersects
+wherever the offset exceeds the local radius of curvature - the inside
+of a tight corner - producing a small loop. The usual treatment is to
+discard it; this keeps it. When on, a curve is split at each of its own
+crossings: the loop is excised as its own CLOSED curve (marked
+isSelfLoop, and skipped by the welder, which would otherwise reopen it),
+and the remaining path is rejoined at the crossing point.
+
+Splitting happens BEFORE welding, because a weld joins two different
+curves and would happily consume a loop's ends.
+
+A loop is kept or dropped on ENCLOSED AREA, not point count. The first
+version used point count and a test caught it immediately: a genuine
+four-point loop was indistinguishable from a four-point numerical
+sliver. Area asks the question directly - is there anything inside this?
+Either way the CUT still happens, so the path is cleaned regardless.
+8 checks in scripts/active/test-self-loops.mjs, including that a small
+four-point loop with real area survives and a near-zero-area sliver does
+not.
+
+CURVES THAT INTERSECT BUT DO NOT JOIN. Diagnosed by measurement rather
+than by reading the code, after a first suspicion (firstIntersection's
+`nearAEnd && nearBEnd` exclusion) turned out to be innocent: across
+B/A/H/g/8/S/k/R at progression 1, ZERO genuine crossings were left
+unwelded, and zero were being skipped by that rule.
+
+The real cause is that the welder only ever fires on a TRUE CROSSING,
+and at lower progressions the offset curves approach each other and stop
+without crossing. Measured on H/A/k:
+
+  progression 0.35 - 22 pairs within 4.4-8.5px, never crossing
+  progression 0.60 -  2 pairs
+  progression 1.00 -  2 pairs
+
+Visually they meet, because the stroke is thick. Geometrically they do
+not, so nothing welded.
+
+Added Join Proximity (Px), default 9, 0 to disable. When two curves do
+not cross, their ENDS are welded if within the tolerance.
+
+ENDS ONLY, and that restriction is what makes it safe rather than a
+detail: a curve's two offset sides run parallel about 9px apart at
+progression 0.35, well inside any useful tolerance, so a proximity test
+over whole polylines would weld every stroke to itself. Welding between
+the two sides of the SAME skeleton edge is excluded for the same reason.
+Each weld records whether it came from a crossing or a gap, and how wide
+the gap was, since the two are indistinguishable once drawn.
+
+Verified, H/A/k at progression 0.35, pairs whose ends are within 12px
+and never cross:
+
+  proximity off (0px) - 15 surviving sides, 17 welds, 13 pairs still open
+  proximity on  (9px) -  6 surviving sides, 26 welds (12 by proximity),
+                         1 pair still open
+
+Surviving sides dropping 15 -> 6 is the joins actually merging curves
+into fewer, longer polylines rather than just counting more welds.
+
+No over-welding at high progression, which was the risk: at progression
+1, A, B and 8 used ZERO proximity welds - the crossing test still
+handles them - and the largest gap ever welded across the whole sweep
+was 8.58px, inside the 9px tolerance.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

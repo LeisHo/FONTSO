@@ -115,6 +115,26 @@ export const DEFAULT_TWEEN = {
     // unbounded mitre; past this ratio it falls back to a bevel instead
     // of shooting off across the glyph.
     joinMiterLimit: 4,
+
+    // How close two curve ENDS may come without crossing and still be
+    // welded, in raster pixels. 0 disables it and restores
+    // crossing-only welding.
+    //
+    // Offset curves that meet at a junction only actually CROSS once the
+    // progression has pushed them far enough; below that they approach
+    // and stop, so a crossing-only welder leaves the junction open.
+    // Measured on Comic Sans at progression 0.35: 22 pairs across H, A
+    // and k came within 4.4-8.5px of each other without ever crossing,
+    // against 2 such pairs at progression 1.
+    joinProximityPx: 9,
+
+    // Split a curve at its OWN crossings and keep the loop as its own
+    // closed curve. An offset curve self-intersects wherever the offset
+    // exceeds the local radius of curvature - the inside of a tight
+    // corner - producing a small loop. The usual treatment is to discard
+    // it; this keeps it, as a separate closed curve the router can enter
+    // like any other loop.
+    loopSingleCurves: false,
 };
 
 // Builds tween geometry for every segment. Cheap enough to re-run on
@@ -160,8 +180,39 @@ export function buildTween(vector, raster, distanceField, settings) {
         });
     }
 
+    // Self-crossings are split BEFORE welding. A weld joins two
+    // different curves and would happily consume a loop's ends, so the
+    // loops have to exist as their own curves first; they are marked
+    // isSelfLoop and skipped by the welder.
+    let selfLoops = 0;
+    if (s.loopSingleCurves) {
+        const extra = [];
+        for (const c of curves) {
+            for (const side of ['left', 'right']) {
+                const pts = c[side];
+                if (!pts || pts.length < 4) continue;
+                const { path, loops } = splitSelfLoops(pts);
+                if (!loops.length) continue;
+                c[side] = path;
+                for (const loop of loops) {
+                    extra.push({
+                        edgeId: c.edgeId,
+                        isLoop: true,
+                        isSelfLoop: true,
+                        centre: loop,
+                        radii: c.radii,
+                        left: loop,
+                        right: null,
+                    });
+                    selfLoops++;
+                }
+            }
+        }
+        curves.push(...extra);
+    }
+
     const joined = s.joinIntersections ? joinIntersectingCurves(curves, s) : { welds: [], skipped: 0 };
-    return { curves, settings: s, joins: joined };
+    return { curves, settings: s, joins: { ...joined, selfLoops } };
 }
 
 // ====================================================================
@@ -203,11 +254,15 @@ function joinIntersectingCurves(curves, settings) {
     // side of another.
     const items = [];
     for (let ci = 0; ci < curves.length; ci++) {
+        // A self-loop is already closed. Welding it to a neighbour would
+        // reopen it and undo the split that produced it.
+        if (curves[ci].isSelfLoop) continue;
         if (curves[ci].left && curves[ci].left.length > 1) items.push({ ci, side: 'left', pts: curves[ci].left, alive: true });
         if (curves[ci].right && curves[ci].right.length > 1) items.push({ ci, side: 'right', pts: curves[ci].right, alive: true });
     }
 
     const welds = [];
+    const proximityPx = settings.joinProximityPx ?? 0;
     let guard = items.length * 6 + 16; // iteration cap; see below
 
     // Greedy: weld the first crossing found, then rescan. Rescanning is
@@ -222,12 +277,19 @@ function joinIntersectingCurves(curves, settings) {
             for (let j = i + 1; j < items.length && !found; j++) {
                 if (!items[j].alive) continue;
                 const hit = firstIntersection(items[i].pts, items[j].pts);
-                if (hit) found = { i, j, ...hit };
+                if (hit) { found = { i, j, ...hit, via: 'crossing' }; break; }
+                // No true crossing: fall back to a near miss between the
+                // two curves' ends, but never between the two sides of
+                // the SAME skeleton edge - those run parallel and would
+                // weld a stroke to itself.
+                if (items[i].ci === items[j].ci) continue;
+                const near = endProximity(items[i].pts, items[j].pts, proximityPx);
+                if (near) found = { i, j, ...near, via: 'proximity' };
             }
         }
         if (!found) break;
 
-        const { i, j, p, si, sj } = found;
+        const { i, j, p, si, sj, via, gap } = found;
         const a = keepLongerSide(items[i].pts, si, p);
         const b = keepLongerSide(items[j].pts, sj, p);
         if (!a || !b) { items[j].alive = false; continue; }
@@ -244,6 +306,11 @@ function joinIntersectingCurves(curves, settings) {
             angleDeg: +corner.angleDeg.toFixed(1),
             treatment: corner.treatment,
             points: corner.pts.length,
+            // Which rule produced this weld, so the debug panel shows
+            // whether a join came from a real crossing or from closing a
+            // gap - they look identical once drawn.
+            via: via || 'crossing',
+            gapPx: gap !== undefined ? +gap.toFixed(2) : 0,
         });
 
         // The weld result replaces item i and retires item j, so the
@@ -379,6 +446,92 @@ function polyLen(pts) {
 // curves belonging to edges that share a junction already touch at their
 // ends, and welding those would fire on essentially every pair at low
 // progression values, where nothing has actually crossed yet.
+// The first place a polyline crosses ITSELF, or null.
+//
+// Segments closer together than MIN_SEGMENT_GAP are skipped. Neighbours
+// share an endpoint, which segmentIntersection already rejects, but two
+// segments a step apart can still register a crossing from nothing more
+// than a sharp zig-zag in the resampled points - a numerical artefact,
+// not a loop.
+const MIN_SEGMENT_GAP = 2;
+
+function firstSelfIntersection(pts) {
+    for (let i = 0; i < pts.length - 1; i++) {
+        for (let j = i + MIN_SEGMENT_GAP; j < pts.length - 1; j++) {
+            const p = segmentIntersection(pts[i], pts[i + 1], pts[j], pts[j + 1]);
+            if (p) return { p, i, j };
+        }
+    }
+    return null;
+}
+
+// Splits a polyline at every self-crossing.
+//
+// Returns { path, loops }: `path` is what remains once each loop is cut
+// out and its two ends rejoined at the crossing point, and `loops` are
+// the excised pieces, each closed by repeating the crossing point at
+// both ends so it is a genuine ring rather than an almost-ring.
+//
+// Iterative rather than recursive on the remainder, so a curve with
+// several loops is handled in one pass, with a guard because a
+// pathological polyline could otherwise keep producing crossings.
+export function splitSelfLoops(pts, minLoopAreaPx = 1) {
+    let path = pts;
+    const loops = [];
+    let guard = 32;
+    while (guard-- > 0) {
+        const hit = firstSelfIntersection(path);
+        if (!hit) break;
+        const { p, i, j } = hit;
+        const loop = [p, ...path.slice(i + 1, j + 1), p];
+        const rest = [...path.slice(0, i + 1), p, ...path.slice(j + 1)];
+        // Kept or dropped on ENCLOSED AREA, not point count. Point count
+        // is only a proxy and gets both cases wrong: a genuine loop can
+        // be four points, while a sliver that doubles back on itself can
+        // be twenty. Area asks the question directly - is there anything
+        // inside this? Dropping a sliver here rather than earlier means
+        // the CUT still happens, so the path is cleaned either way.
+        if (polygonArea(loop) >= minLoopAreaPx) loops.push(loop);
+        if (rest.length < 2) break;
+        path = rest;
+    }
+    return { path, loops };
+}
+
+// The closest approach between an END of A and an END of B, if within
+// `tol`. Returns a synthetic crossing at the midpoint of that gap, in
+// the same shape firstIntersection returns so the welder can treat both
+// the same way.
+//
+// ENDS ONLY, and this is the whole reason it is safe. A curve's two
+// offset sides run parallel a short distance apart - at progression 0.35
+// about 9px, which is inside any useful tolerance - so a proximity test
+// over whole polylines would weld every stroke to itself. Ends approach
+// each other only where strokes actually meet.
+function endProximity(A, B, tol) {
+    if (!(tol > 0)) return null;
+    const ends = (P) => [{ p: P[0], si: 0 }, { p: P[P.length - 1], si: P.length - 2 }];
+    let best = null;
+    for (const a of ends(A)) {
+        for (const b of ends(B)) {
+            const d = Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y);
+            if (d <= tol && (!best || d < best.d)) {
+                best = { d, p: { x: (a.p.x + b.p.x) / 2, y: (a.p.y + b.p.y) / 2 }, si: a.si, sj: b.si };
+            }
+        }
+    }
+    return best ? { p: best.p, si: best.si, sj: best.sj, gap: best.d } : null;
+}
+
+// Unsigned area of a closed polyline, by the shoelace formula.
+function polygonArea(pts) {
+    let a = 0;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        a += (pts[j].x + pts[i].x) * (pts[j].y - pts[i].y);
+    }
+    return Math.abs(a / 2);
+}
+
 function firstIntersection(A, B) {
     for (let i = 0; i < A.length - 1; i++) {
         for (let j = 0; j < B.length - 1; j++) {
