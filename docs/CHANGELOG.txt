@@ -1696,6 +1696,54 @@ handles them - and the largest gap ever welded across the whole sweep
 was 8.58px, inside the 9px tolerance.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  4:41 AM - 4:53 AM
+
+Report: "when i load fonts and click save, they dont save".
+
+ON THE DEPLOYMENT IT DEMONSTRABLY WORKS. Verified the whole round trip
+on https://fontso.vercel.app: a font imported through the real picker,
+Sync clicked, POST returned
+  {"ok":true,"written":["data/processed/fonts/SaveProbe-Gelasio.ttf",
+   "data/processed/dev-panel-settings.json"],"commitSha":"27184ba..."}
+then a full page reload restored it into the dropdown alongside the
+previously saved fonts. No JS errors. The 73 console 404s on that page
+are all expected - /api/fonts is serve.py-only, and the eight
+proprietary [local only] fonts are HEAD-probed and correctly skipped.
+
+ON LOCALHOST A REAL BUG WAS FOUND, and it is a plausible cause if that
+is where the saving was being attempted.
+
+serve.py's do_POST returned its 503 (no GITHUB_TOKEN) and 401 (bad
+secret) BEFORE reading self.rfile. The connection is HTTP/1.1
+keep-alive, so the unread request body stayed in the socket buffer and
+the NEXT request parse read it as a request line. The server log shows
+exactly that:
+  code 400, message Bad request version ('Tween":null,...')
+  code 414, message Request-URI Too Long
+The connection then died and the browser reported an opaque "Failed to
+fetch" instead of the clear 503 the server had actually sent.
+
+It only appeared once a POST carried a font: a small body fits in the
+buffer and a large one does not. So "it works until I load a font, then
+saving breaks" is exactly the symptom this produces - which matches the
+report. Fixed by reading the body at the top of do_POST, before any
+early return. Draining costs nothing and makes every error path safe.
+
+Verified after the fix: a POST carrying a 394KB font returns a clean 503
+with the real message, and the server log shows no 400 or 414 at all -
+only the expected /api/fonts 404.
+
+ALSO: the client's failure message no longer reports a bare transport
+error on a local server. "Failed to fetch" sends the reader hunting for
+a bug that is not there, when the cause is always the same missing
+environment variable. It now says so and names the fix.
+
+Note on method: the deployment was tested FIRST and passed, which
+previously led to wrongly concluding a reported failure must be local.
+This time the local path was investigated anyway rather than treated as
+explained, and that is where the real defect was.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

@@ -157,6 +157,14 @@ The two marked "Hit here" were hit in this project and are not theoretical.
   either side's request or response contract, change both, and test
   against the DEPLOYMENT rather than the local server, which is the half
   that was already correct. (Hit here, 2026-09-23.)
+- **Any early return in `serve.py`'s `do_POST` must read the request body
+  first.** The connection is HTTP/1.1 keep-alive, so an unread body stays
+  in the socket buffer and the next request parse reads it as a request
+  line - producing `400 Bad request version ('Tween":null,...')` and
+  `414 Request-URI Too Long`, a dead connection, and an opaque "Failed to
+  fetch" in the browser instead of the error the server actually sent. It
+  only shows up once a POST carries a font, because a small body fits in
+  the buffer and a large one does not. (Hit here, 2026-09-23.)
 - **`python -m http.server` cannot serve this project** — it sends `.mjs`
   as `text/plain` and every engine import fails. Use `serve.py`.
 - **A local static server in the Claude Code sandbox can intermittently

@@ -1313,9 +1313,15 @@ async function syncToRemote() {
             setStatus('Saved to the repo — the confirmation was lost in transit, but the write landed.', 'ok');
             return;
         }
-        // Not an error the user needs to act on: localStorage already
-        // holds the panel state, so nothing was lost.
-        setStatus(`Saved locally only — remote save unavailable (${res.error || 'no endpoint'}).`, 'warn');
+        // Not a bare transport error: on the local dev server the cause
+        // is always the same missing environment variable, and "Failed to
+        // fetch" sends the reader hunting for a bug that is not there.
+        // localStorage already holds the panel state either way, so
+        // nothing was lost.
+        const onLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:';
+        setStatus(onLocal
+            ? `Saved to localStorage. The local dev server cannot commit to the repo — it needs GITHUB_TOKEN in its own environment. Restart it with that variable set, or use the deployed site. (${res.error || 'no endpoint'})`
+            : `Saved locally only — remote save unavailable (${res.error || 'no endpoint'}).`, 'warn');
         return;
     }
     for (const f of pending) markSaved(f.key, FONT_DIR + f.fileName);

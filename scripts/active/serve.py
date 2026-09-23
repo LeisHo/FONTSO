@@ -195,6 +195,27 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(502, {'ok': False, 'error': str(e)})
 
     def do_POST(self):
+        # READ THE BODY FIRST, before any early return.
+        #
+        # This connection is HTTP/1.1 keep-alive. An unread request body
+        # stays in the socket buffer, and the NEXT request parse reads it
+        # as a request line - which is how a perfectly ordinary
+        # "no token configured" 503 turned into
+        #   code 400, message Bad request version ('Tween":null,...')
+        #   code 414, message Request-URI Too Long
+        # and a dead connection, surfacing in the browser as an opaque
+        # "Failed to fetch" instead of the clear message the server had
+        # actually sent. It only showed up once a POST carried a font,
+        # because a small body fits in the buffer and a large one does
+        # not. Draining costs nothing and makes every error path safe.
+        raw = b''
+        try:
+            length = int(self.headers.get('Content-Length') or 0)
+            if length > 0:
+                raw = self.rfile.read(length)
+        except Exception:  # noqa: BLE001 - a broken read is handled below
+            raw = b''
+
         if not self._is_api():
             return self._json(404, {'ok': False, 'error': 'Not found'})
         cfg = _gh_config()
@@ -206,8 +227,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(401, {'ok': False, 'error': 'Unauthorized'})
 
         try:
-            length = int(self.headers.get('Content-Length') or 0)
-            body = json.loads(self.rfile.read(length).decode('utf-8') or '{}')
+            body = json.loads(raw.decode('utf-8') or '{}')
         except Exception as e:  # noqa: BLE001
             return self._json(400, {'ok': False, 'error': f'Bad JSON body: {e}'})
 
