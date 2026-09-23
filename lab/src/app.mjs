@@ -1195,6 +1195,11 @@ window.renderFontLabDevGroups = function renderFontLabDevGroups() {
 // Everything here degrades to localStorage silently when the endpoint
 // is absent, which is the normal case on a plain static server and the
 // documented default rather than a failure.
+// Bumped alongside the ?v= query on the script tags, so "what build is
+// that tab running?" is answerable in one line instead of inferred from
+// behaviour.
+const BUILD = 19;
+
 const SETTINGS_ENDPOINT = '/api/save-settings';
 const FONT_DIR = 'data/processed/fonts/';
 
@@ -1243,9 +1248,15 @@ async function remoteSave({ patch = {}, files = [] } = {}) {
             body: JSON.stringify({ settings: { ...current, ...patch }, files }),
         });
         const data = await resp.json().catch(() => ({}));
-        return { ok: resp.ok && data.ok !== false, error: data.error, written: data.written || [] };
+        return {
+            ok: resp.ok && data.ok !== false,
+            status: resp.status,
+            sentSecret: !!DEV_PANEL_SAVE_SECRET,
+            error: data.error,
+            written: data.written || [],
+        };
     } catch (e) {
-        return { ok: false, error: String((e && e.message) || e), written: [] };
+        return { ok: false, status: 0, sentSecret: !!DEV_PANEL_SAVE_SECRET, error: String((e && e.message) || e), written: [] };
     }
 }
 
@@ -1318,6 +1329,28 @@ async function syncToRemote() {
         // fetch" sends the reader hunting for a bug that is not there.
         // localStorage already holds the panel state either way, so
         // nothing was lost.
+        // A 401 means the SERVER has a save key and this page did not
+        // send a matching one. When the page sent NONE at all, it is
+        // running a build from before the key was added - almost always
+        // a tab left open across a deploy, since the page itself is
+        // never re-fetched until it is reloaded.
+        //
+        // Worth singling out because the generic fallback below reads as
+        // success: settings still persist to localStorage, so the only
+        // visible symptom is that imported FONTS vanish on reload, fonts
+        // being the one thing localStorage deliberately does not hold.
+        // That is a long way from "your tab is out of date".
+        if (res.status === 401 && !res.sentSecret) {
+            setStatus('Saved to localStorage only. This tab is running an older build of the page with no save key, '
+                + 'so the repo rejected the write. Hard-reload (Ctrl+Shift+R / Cmd+Shift+R) and Sync again.', 'error');
+            return;
+        }
+        if (res.status === 401) {
+            setStatus('Saved to localStorage only. The repo rejected the save key this page sent (401). '
+                + 'It no longer matches DEV_PANEL_SAVE_SECRET on the server.', 'error');
+            return;
+        }
+
         const onLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:';
         setStatus(onLocal
             ? `Saved to localStorage. The local dev server cannot commit to the repo — it needs GITHUB_TOKEN in its own environment. Restart it with that variable set, or use the deployed site. (${res.error || 'no endpoint'})`
@@ -1842,4 +1875,6 @@ renderer.draw();
 // Exposed deliberately: this is a laboratory. Being able to poke the
 // pipeline from the console — re-run with different config, dump a
 // result, diff two fonts — is a feature, not a leak.
-window.fontLab = { state, renderer, animator, viewport, rerun, runPipeline, toDebugJSON, loadFontFromUrl };
+window.fontLab = {
+    build: BUILD,
+    hasSaveSecret: () => !!DEV_PANEL_SAVE_SECRET, state, renderer, animator, viewport, rerun, runPipeline, toDebugJSON, loadFontFromUrl };
