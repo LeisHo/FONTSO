@@ -3252,13 +3252,13 @@
       "desktop:Path Data (JSON)": true,
       "desktop:View": true,
       "desktop:Layers": true,
-      "desktop:Font & Character": false,
+      "desktop:Font & Character": true,
       "desktop:Text": true,
       "desktop:Skeletonisation": true,
       "desktop:Rasterisation": true,
       "desktop:Path": true,
       "desktop:Cleanup": true,
-      "desktop:Path Tween": false,
+      "desktop:Path Tween": true,
       "desktop:Animation": true,
       "desktop:Traversal": true,
       "mobile:Dev Panel": false,
@@ -3551,11 +3551,11 @@
             "letter": 0
           }
         ],
-        "savedAt": 1790159024611
+        "savedAt": 1790159118231
       }
     ]
   },
-  "lastSaveStamp": "1790159024611-4wu9gv4l",
+  "lastSaveStamp": "1790159118231-0uvwq26y",
   "fontSettings": {
     "Gelasio-Regular": {
       "memory": {
