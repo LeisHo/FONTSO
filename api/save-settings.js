@@ -74,8 +74,8 @@ module.exports = async (req, res) => {
     }
 
     const branch = process.env.GITHUB_BRANCH || DEFAULT_BRANCH;
-    const path = process.env.SETTINGS_FILE_PATH || DEFAULT_PATH;
-    const apiUrl = `https://api.github.com/repos/${repo}/contents/${path}`;
+    const settingsPath = process.env.SETTINGS_FILE_PATH || DEFAULT_PATH;
+    const apiUrl = `https://api.github.com/repos/${repo}/contents/${settingsPath}`;
     const headers = {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         Accept: 'application/vnd.github+json',
@@ -110,39 +110,77 @@ module.exports = async (req, res) => {
         return;
     }
 
+    // The posted shape is { settings, files } (see lab/src/app.mjs's
+    // remoteSave). BINARY ASSETS GO IN AS THEIR OWN FILES, never embedded
+    // in the settings document - a font is 250KB-1.8MB, base64 inflates it
+    // by a third, and Sync rewrites the settings document on every run, so
+    // embedding would mean a fresh multi-megabyte git object every save.
+    // fontStore.mjs explains the reasoning at length.
+    //
+    // This half existed only in scripts/active/serve.py and never here,
+    // which is why imported fonts persisted on a local server and silently
+    // never did on the deployment: this function committed the WHOLE body
+    // as the settings file, embedding the font bytes and reporting no
+    // written files. Kept deliberately parallel to serve.py's version.
     try {
-        let sha;
-        const getResp = await fetch(`${apiUrl}?ref=${encodeURIComponent(branch)}`, { headers });
-        if (getResp.ok) {
-            const getData = await getResp.json();
-            sha = getData.sha;
-        } else if (getResp.status !== 404) {
-            const errText = await getResp.text();
-            res.status(502).json({ ok: false, error: `GitHub lookup failed (${getResp.status}): ${errText}` });
-            return;
+        const written = [];
+
+        for (const f of (Array.isArray(body.files) ? body.files : [])) {
+            const filePath = String((f && f.path) || '');
+            // The path comes from the client and the token behind this call
+            // can write anywhere in the repo, so anything that could climb
+            // out of the intended directory is refused outright rather than
+            // normalised into something that merely looks safe.
+            if (!filePath || filePath.includes('..') || filePath.startsWith('/')) {
+                res.status(400).json({ ok: false, error: `Refusing suspicious path: ${JSON.stringify(filePath)}` });
+                return;
+            }
+            const r = await putFile(filePath, String((f && f.contentBase64) || ''),
+                (f && f.message) || `Add ${filePath} via Font Path Laboratory`);
+            if (!r.ok) {
+                res.status(502).json({ ok: false, error: `Write failed for ${filePath}: ${r.error}` });
+                return;
+            }
+            written.push(filePath);
         }
 
-        const content = Buffer.from(JSON.stringify(body, null, 2) + '\n', 'utf-8').toString('base64');
-        const putResp = await fetch(apiUrl, {
-            method: 'PUT',
-            headers,
-            body: JSON.stringify({
-                message: 'Update dev-panel-settings.json via Save Settings',
-                content,
-                branch,
-                ...(sha ? { sha } : {}),
-            }),
-        });
-
-        if (!putResp.ok) {
-            const errText = await putResp.text();
-            res.status(502).json({ ok: false, error: `GitHub commit failed (${putResp.status}): ${errText}` });
-            return;
+        let commitSha;
+        if (body.settings !== undefined && body.settings !== null) {
+            const content = Buffer.from(JSON.stringify(body.settings, null, 2) + '\n', 'utf-8').toString('base64');
+            const r = await putFile(settingsPath, content, 'Update dev-panel-settings.json via Save Settings');
+            if (!r.ok) {
+                res.status(502).json({ ok: false, error: `Settings write failed: ${r.error}` });
+                return;
+            }
+            written.push(settingsPath);
+            commitSha = r.commitSha;
         }
 
-        const putData = await putResp.json();
-        res.status(200).json({ ok: true, commitSha: putData.commit && putData.commit.sha });
+        res.status(200).json({ ok: true, written, commitSha });
     } catch (err) {
         res.status(500).json({ ok: false, error: String((err && err.message) || err) });
+    }
+
+    // Create-or-update one file. The Contents API needs the existing blob
+    // sha to update and fails without it on an existing file, so the sha is
+    // looked up first; a 404 there simply means "create".
+    async function putFile(filePath, contentBase64, message) {
+        const url = `https://api.github.com/repos/${repo}/contents/${filePath}`;
+        let sha;
+        const head = await fetch(`${url}?ref=${encodeURIComponent(branch)}`, { headers });
+        if (head.ok) {
+            const d = await head.json();
+            sha = d.sha;
+        } else if (head.status !== 404) {
+            return { ok: false, error: `lookup ${head.status}: ${await head.text()}` };
+        }
+        const put = await fetch(url, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({ message, content: contentBase64, branch, ...(sha ? { sha } : {}) }),
+        });
+        if (!put.ok) return { ok: false, error: `${put.status}: ${await put.text()}` };
+        const d = await put.json();
+        return { ok: true, commitSha: d.commit && d.commit.sha };
     }
 };
