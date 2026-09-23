@@ -1,0 +1,3246 @@
+{
+  "settings": {
+    "importedFonts": [],
+    "devPanel": {
+      "controls": {
+        "sliderRasterEmHeight": 256,
+        "sliderWrapWidthPx": 900,
+        "sliderLineHeightEm": 1.25,
+        "checkboxUseKerning": true,
+        "sliderLetterSpacingUnits": 0,
+        "checkboxAutoFit": true,
+        "sliderZoomSpeed": 1.0016,
+        "checkboxLayerGlyphFill": true,
+        "checkboxLayerGlyphOutline": true,
+        "checkboxLayerMask": false,
+        "checkboxLayerRawSkeleton": false,
+        "checkboxLayerRawPolyline": false,
+        "checkboxLayerCleanSkeleton": true,
+        "checkboxLayerNodes": true,
+        "checkboxLayerTraversal": false,
+        "checkboxLayerConnectors": true,
+        "checkboxLayerOrder": false,
+        "checkboxLayerDot": true,
+        "checkboxLayerTween": true,
+        "checkboxPathThicknessEnabled": false,
+        "sliderPathThickness": 8,
+        "colorPathColor": "#31d67a",
+        "checkboxProgressiveThickness": false,
+        "checkboxAdaptiveThickness": false,
+        "checkboxPathTweenEnabled": false,
+        "sliderTweenProgression": 0.5,
+        "sliderTweenRadiusScale": 1,
+        "sliderTweenRadiusSmoothing": 2,
+        "sliderTweenNormalSmoothing": 2,
+        "sliderTweenResampleSpacing": 2,
+        "sliderTweenExtendTerminals": 0,
+        "checkboxTweenBothSides": true,
+        "checkboxTweenJoinIntersections": true,
+        "selectTweenJoinStyle": "auto",
+        "sliderTweenJoinSharpAngle": 60,
+        "sliderTweenJoinCornerRadius": 4,
+        "sliderTweenJoinMiterLimit": 4,
+        "selectAnimationPath": "midline",
+        "checkboxAnimLoop": true,
+        "sliderAnimSpeed": 220,
+        "sliderAnimScrub": 0,
+        "sliderRasterPadding": 4,
+        "sliderAlphaThreshold": 128,
+        "selectThinningAlgorithm": "zhang-suen",
+        "checkboxRemoveRedundantPixels": true,
+        "sliderMaxThinningIterations": 400,
+        "checkboxRemoveIsolatedPixels": true,
+        "sliderMinSourceAreaPx": 24,
+        "sliderMinBranchLengthPx": 12,
+        "sliderPruneIterations": 3,
+        "checkboxMergeAdjacentJunctions": true,
+        "sliderSimplifyTolerancePx": 0.8,
+        "sliderSmoothingPasses": 1,
+        "sliderSmoothingStrength": 0.6,
+        "checkboxPreserveEndpointsWhileSmoothing": true,
+        "checkboxNearestRouting": true,
+        "checkboxGroupByLetter": true,
+        "sliderRightwardBias": 1.5,
+        "checkboxTweenEntryAtEndpoints": true,
+        "checkboxEmitConnectors": true,
+        "sliderTraversalResampleSpacingPx": 2
+      },
+      "layout": {
+        "left": 20,
+        "top": 20,
+        "width": 340,
+        "height": 520
+      },
+      "devPanelStyle": {
+        "titleFontSize": 17,
+        "tabFontSize": 12,
+        "groupTitleFontSize": 14,
+        "settingTitleFontSize": 12,
+        "buttonTextBorder": 0,
+        "scrollStrength": 0.2,
+        "opacity": 1,
+        "bgColor": "#000000",
+        "titleTextColor": "#ffffff",
+        "nonTitleTextColor": "#ffffff",
+        "accentColor": "#005f8f",
+        "sliderColor": "#ffffff",
+        "fontFamily": "Helvetica, Arial, sans-serif",
+        "capsButtonText": true,
+        "capsTabText": true,
+        "capsGroupNames": true,
+        "capsSettingsText": false,
+        "buttonTextLetterSpacing": 0,
+        "tabTextLetterSpacing": 0,
+        "groupTextLetterSpacing": 0.8,
+        "settingsTextLetterSpacing": 0,
+        "buttonHeight": 21,
+        "valueFontSize": 12,
+        "groupLabelBgColor": "#005f8f",
+        "titleLetterSpacing": 2.3,
+        "titleLineHeight": 1.2,
+        "tabLineHeight": 1.2,
+        "buttonLineHeight": 1.2,
+        "settingsLineHeight": 1.2,
+        "groupLineHeight": 1.2,
+        "buttonFontSize": 10,
+        "titleBold": true,
+        "tabBold": true,
+        "buttonBold": true,
+        "settingsBold": false,
+        "groupBold": true,
+        "titleCapitalize": false,
+        "groupTextColor": "#ffffff",
+        "buttonTextColor": "#ffffff",
+        "settingNumberColor": "#5cc9ff",
+        "tabTextColor": "#ffffff"
+      },
+      "mobileDevPanelStyle": {
+        "titleFontSize": 17,
+        "tabFontSize": 12,
+        "groupTitleFontSize": 14,
+        "settingTitleFontSize": 12,
+        "buttonTextBorder": 0,
+        "scrollStrength": 0.2,
+        "opacity": 1,
+        "bgColor": "#000000",
+        "titleTextColor": "#ffffff",
+        "nonTitleTextColor": "#ffffff",
+        "accentColor": "#005f8f",
+        "sliderColor": "#ffffff",
+        "fontFamily": "Helvetica, Arial, sans-serif",
+        "capsButtonText": true,
+        "capsTabText": true,
+        "capsGroupNames": true,
+        "capsSettingsText": false,
+        "buttonTextLetterSpacing": 0,
+        "tabTextLetterSpacing": 0,
+        "groupTextLetterSpacing": 0.8,
+        "settingsTextLetterSpacing": 0,
+        "buttonHeight": 21,
+        "valueFontSize": 12,
+        "groupLabelBgColor": "#005f8f",
+        "titleLetterSpacing": 2.3,
+        "titleLineHeight": 1.2,
+        "tabLineHeight": 1.2,
+        "buttonLineHeight": 1.2,
+        "settingsLineHeight": 1.2,
+        "groupLineHeight": 1.2,
+        "buttonFontSize": 10,
+        "titleBold": true,
+        "tabBold": true,
+        "buttonBold": true,
+        "settingsBold": false,
+        "groupBold": true,
+        "titleCapitalize": false,
+        "groupTextColor": "#ffffff",
+        "buttonTextColor": "#ffffff",
+        "settingNumberColor": "#5cc9ff",
+        "tabTextColor": "#ffffff"
+      },
+      "landscapeDevPanelStyle": {
+        "titleFontSize": 17,
+        "tabFontSize": 12,
+        "groupTitleFontSize": 14,
+        "settingTitleFontSize": 12,
+        "buttonTextBorder": 0,
+        "scrollStrength": 0.2,
+        "opacity": 1,
+        "bgColor": "#000000",
+        "titleTextColor": "#ffffff",
+        "nonTitleTextColor": "#ffffff",
+        "accentColor": "#005f8f",
+        "sliderColor": "#ffffff",
+        "fontFamily": "Helvetica, Arial, sans-serif",
+        "capsButtonText": true,
+        "capsTabText": true,
+        "capsGroupNames": true,
+        "capsSettingsText": false,
+        "buttonTextLetterSpacing": 0,
+        "tabTextLetterSpacing": 0,
+        "groupTextLetterSpacing": 0.8,
+        "settingsTextLetterSpacing": 0,
+        "buttonHeight": 21,
+        "valueFontSize": 12,
+        "groupLabelBgColor": "#005f8f",
+        "titleLetterSpacing": 2.3,
+        "titleLineHeight": 1.2,
+        "tabLineHeight": 1.2,
+        "buttonLineHeight": 1.2,
+        "settingsLineHeight": 1.2,
+        "groupLineHeight": 1.2,
+        "buttonFontSize": 10,
+        "titleBold": true,
+        "tabBold": true,
+        "buttonBold": true,
+        "settingsBold": false,
+        "groupBold": true,
+        "titleCapitalize": false,
+        "groupTextColor": "#ffffff",
+        "buttonTextColor": "#ffffff",
+        "settingNumberColor": "#5cc9ff",
+        "tabTextColor": "#ffffff"
+      },
+      "sectionOrder": {
+        "desktopTabContent": [
+          {
+            "key": "desktop:Dev Panel",
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:MECHANICS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelScrollStrength"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderDevPanelScrollStrength"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:PANEL UI",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelBg"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelAccent"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelSliderColor"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelOpacity"
+                    }
+                  ],
+                  "rowKeys": [
+                    "colorDevPanelBg",
+                    "colorDevPanelAccent",
+                    "colorDevPanelSliderColor",
+                    "sliderDevPanelOpacity"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:TEXT",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "selectDevPanelFontFamily"
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "desktop:Dev Panel Title",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "checkboxDevBoldTitle"
+                          },
+                          {
+                            "type": "row",
+                            "key": "checkboxDevCapsTitleText"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelTitleFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelTitleLetterSpacing"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelTitleLineHeight"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelButtonTextBorder"
+                          },
+                          {
+                            "type": "row",
+                            "key": "colorDevPanelTitleText"
+                          }
+                        ],
+                        "rowKeys": [
+                          "checkboxDevBoldTitle",
+                          "checkboxDevCapsTitleText",
+                          "sliderDevPanelTitleFontSize",
+                          "sliderDevPanelTitleLetterSpacing",
+                          "sliderDevPanelTitleLineHeight",
+                          "sliderDevPanelButtonTextBorder",
+                          "colorDevPanelTitleText"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "desktop:Group Title",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "checkboxDevBoldGroup"
+                          },
+                          {
+                            "type": "row",
+                            "key": "checkboxDevCapsGroupNames"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelGroupTitleFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevGroupTextLetterSpacing"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelGroupLineHeight"
+                          },
+                          {
+                            "type": "row",
+                            "key": "colorDevPanelGroupText"
+                          },
+                          {
+                            "type": "row",
+                            "key": "colorDevPanelGroupLabelBg"
+                          }
+                        ],
+                        "rowKeys": [
+                          "checkboxDevBoldGroup",
+                          "checkboxDevCapsGroupNames",
+                          "sliderDevPanelGroupTitleFontSize",
+                          "sliderDevGroupTextLetterSpacing",
+                          "sliderDevPanelGroupLineHeight",
+                          "colorDevPanelGroupText",
+                          "colorDevPanelGroupLabelBg"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "desktop:Setting Title",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "checkboxDevCapsSettingsText"
+                          },
+                          {
+                            "type": "row",
+                            "key": "checkboxDevBoldSettings"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelSettingTitleFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelValueFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelSettingsLineHeight"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevSettingsTextLetterSpacing"
+                          },
+                          {
+                            "type": "row",
+                            "key": "colorDevPanelNonTitleText"
+                          },
+                          {
+                            "type": "row",
+                            "key": "colorDevPanelSettingNumber"
+                          }
+                        ],
+                        "rowKeys": [
+                          "checkboxDevCapsSettingsText",
+                          "checkboxDevBoldSettings",
+                          "sliderDevPanelSettingTitleFontSize",
+                          "sliderDevPanelValueFontSize",
+                          "sliderDevPanelSettingsLineHeight",
+                          "sliderDevSettingsTextLetterSpacing",
+                          "colorDevPanelNonTitleText",
+                          "colorDevPanelSettingNumber"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "desktop:TABS",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "checkboxDevBoldTab"
+                          },
+                          {
+                            "type": "row",
+                            "key": "checkboxDevCapsTabText"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelTabFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevTabTextLetterSpacing"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelTabLineHeight"
+                          },
+                          {
+                            "type": "row",
+                            "key": "colorDevPanelTabText"
+                          }
+                        ],
+                        "rowKeys": [
+                          "checkboxDevBoldTab",
+                          "checkboxDevCapsTabText",
+                          "sliderDevPanelTabFontSize",
+                          "sliderDevTabTextLetterSpacing",
+                          "sliderDevPanelTabLineHeight",
+                          "colorDevPanelTabText"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "desktop:BUTTONS",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "checkboxDevBoldButton"
+                          },
+                          {
+                            "type": "row",
+                            "key": "checkboxDevCapsButtonText"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelButtonFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevButtonTextLetterSpacing"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelButtonLineHeight"
+                          },
+                          {
+                            "type": "row",
+                            "key": "colorDevPanelButtonText"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderDevPanelButtonHeight"
+                          }
+                        ],
+                        "rowKeys": [
+                          "checkboxDevBoldButton",
+                          "checkboxDevCapsButtonText",
+                          "sliderDevPanelButtonFontSize",
+                          "sliderDevButtonTextLetterSpacing",
+                          "sliderDevPanelButtonLineHeight",
+                          "colorDevPanelButtonText",
+                          "sliderDevPanelButtonHeight"
+                        ],
+                        "subgroups": []
+                      }
+                    }
+                  ],
+                  "rowKeys": [
+                    "selectDevPanelFontFamily"
+                  ],
+                  "subgroups": [
+                    {
+                      "key": "desktop:Dev Panel Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "checkboxDevBoldTitle"
+                        },
+                        {
+                          "type": "row",
+                          "key": "checkboxDevCapsTitleText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelTitleLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelTitleLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelButtonTextBorder"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelTitleText"
+                        }
+                      ],
+                      "rowKeys": [
+                        "checkboxDevBoldTitle",
+                        "checkboxDevCapsTitleText",
+                        "sliderDevPanelTitleFontSize",
+                        "sliderDevPanelTitleLetterSpacing",
+                        "sliderDevPanelTitleLineHeight",
+                        "sliderDevPanelButtonTextBorder",
+                        "colorDevPanelTitleText"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "desktop:Group Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "checkboxDevBoldGroup"
+                        },
+                        {
+                          "type": "row",
+                          "key": "checkboxDevCapsGroupNames"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelGroupTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevGroupTextLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelGroupLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelGroupText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelGroupLabelBg"
+                        }
+                      ],
+                      "rowKeys": [
+                        "checkboxDevBoldGroup",
+                        "checkboxDevCapsGroupNames",
+                        "sliderDevPanelGroupTitleFontSize",
+                        "sliderDevGroupTextLetterSpacing",
+                        "sliderDevPanelGroupLineHeight",
+                        "colorDevPanelGroupText",
+                        "colorDevPanelGroupLabelBg"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "desktop:Setting Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "checkboxDevCapsSettingsText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "checkboxDevBoldSettings"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelSettingTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelValueFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelSettingsLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevSettingsTextLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelNonTitleText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelSettingNumber"
+                        }
+                      ],
+                      "rowKeys": [
+                        "checkboxDevCapsSettingsText",
+                        "checkboxDevBoldSettings",
+                        "sliderDevPanelSettingTitleFontSize",
+                        "sliderDevPanelValueFontSize",
+                        "sliderDevPanelSettingsLineHeight",
+                        "sliderDevSettingsTextLetterSpacing",
+                        "colorDevPanelNonTitleText",
+                        "colorDevPanelSettingNumber"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "desktop:TABS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "checkboxDevBoldTab"
+                        },
+                        {
+                          "type": "row",
+                          "key": "checkboxDevCapsTabText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelTabFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevTabTextLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelTabLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelTabText"
+                        }
+                      ],
+                      "rowKeys": [
+                        "checkboxDevBoldTab",
+                        "checkboxDevCapsTabText",
+                        "sliderDevPanelTabFontSize",
+                        "sliderDevTabTextLetterSpacing",
+                        "sliderDevPanelTabLineHeight",
+                        "colorDevPanelTabText"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "desktop:BUTTONS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "checkboxDevBoldButton"
+                        },
+                        {
+                          "type": "row",
+                          "key": "checkboxDevCapsButtonText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelButtonFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevButtonTextLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelButtonLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelButtonText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelButtonHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "checkboxDevBoldButton",
+                        "checkboxDevCapsButtonText",
+                        "sliderDevPanelButtonFontSize",
+                        "sliderDevButtonTextLetterSpacing",
+                        "sliderDevPanelButtonLineHeight",
+                        "colorDevPanelButtonText",
+                        "sliderDevPanelButtonHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  ]
+                }
+              }
+            ],
+            "rowKeys": [],
+            "subgroups": [
+              {
+                "key": "desktop:MECHANICS",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelScrollStrength"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderDevPanelScrollStrength"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "desktop:PANEL UI",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "colorDevPanelBg"
+                  },
+                  {
+                    "type": "row",
+                    "key": "colorDevPanelAccent"
+                  },
+                  {
+                    "type": "row",
+                    "key": "colorDevPanelSliderColor"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelOpacity"
+                  }
+                ],
+                "rowKeys": [
+                  "colorDevPanelBg",
+                  "colorDevPanelAccent",
+                  "colorDevPanelSliderColor",
+                  "sliderDevPanelOpacity"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "desktop:TEXT",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "selectDevPanelFontFamily"
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "desktop:Dev Panel Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "checkboxDevBoldTitle"
+                        },
+                        {
+                          "type": "row",
+                          "key": "checkboxDevCapsTitleText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelTitleLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelTitleLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelButtonTextBorder"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelTitleText"
+                        }
+                      ],
+                      "rowKeys": [
+                        "checkboxDevBoldTitle",
+                        "checkboxDevCapsTitleText",
+                        "sliderDevPanelTitleFontSize",
+                        "sliderDevPanelTitleLetterSpacing",
+                        "sliderDevPanelTitleLineHeight",
+                        "sliderDevPanelButtonTextBorder",
+                        "colorDevPanelTitleText"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "desktop:Group Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "checkboxDevBoldGroup"
+                        },
+                        {
+                          "type": "row",
+                          "key": "checkboxDevCapsGroupNames"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelGroupTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevGroupTextLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelGroupLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelGroupText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelGroupLabelBg"
+                        }
+                      ],
+                      "rowKeys": [
+                        "checkboxDevBoldGroup",
+                        "checkboxDevCapsGroupNames",
+                        "sliderDevPanelGroupTitleFontSize",
+                        "sliderDevGroupTextLetterSpacing",
+                        "sliderDevPanelGroupLineHeight",
+                        "colorDevPanelGroupText",
+                        "colorDevPanelGroupLabelBg"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "desktop:Setting Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "checkboxDevCapsSettingsText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "checkboxDevBoldSettings"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelSettingTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelValueFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelSettingsLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevSettingsTextLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelNonTitleText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelSettingNumber"
+                        }
+                      ],
+                      "rowKeys": [
+                        "checkboxDevCapsSettingsText",
+                        "checkboxDevBoldSettings",
+                        "sliderDevPanelSettingTitleFontSize",
+                        "sliderDevPanelValueFontSize",
+                        "sliderDevPanelSettingsLineHeight",
+                        "sliderDevSettingsTextLetterSpacing",
+                        "colorDevPanelNonTitleText",
+                        "colorDevPanelSettingNumber"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "desktop:TABS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "checkboxDevBoldTab"
+                        },
+                        {
+                          "type": "row",
+                          "key": "checkboxDevCapsTabText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelTabFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevTabTextLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelTabLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelTabText"
+                        }
+                      ],
+                      "rowKeys": [
+                        "checkboxDevBoldTab",
+                        "checkboxDevCapsTabText",
+                        "sliderDevPanelTabFontSize",
+                        "sliderDevTabTextLetterSpacing",
+                        "sliderDevPanelTabLineHeight",
+                        "colorDevPanelTabText"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "desktop:BUTTONS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "checkboxDevBoldButton"
+                        },
+                        {
+                          "type": "row",
+                          "key": "checkboxDevCapsButtonText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelButtonFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevButtonTextLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelButtonLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "colorDevPanelButtonText"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderDevPanelButtonHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "checkboxDevBoldButton",
+                        "checkboxDevCapsButtonText",
+                        "sliderDevPanelButtonFontSize",
+                        "sliderDevButtonTextLetterSpacing",
+                        "sliderDevPanelButtonLineHeight",
+                        "colorDevPanelButtonText",
+                        "sliderDevPanelButtonHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  }
+                ],
+                "rowKeys": [
+                  "selectDevPanelFontFamily"
+                ],
+                "subgroups": [
+                  {
+                    "key": "desktop:Dev Panel Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxDevBoldTitle"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxDevCapsTitleText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelTitleLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelTitleLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelButtonTextBorder"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelTitleText"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxDevBoldTitle",
+                      "checkboxDevCapsTitleText",
+                      "sliderDevPanelTitleFontSize",
+                      "sliderDevPanelTitleLetterSpacing",
+                      "sliderDevPanelTitleLineHeight",
+                      "sliderDevPanelButtonTextBorder",
+                      "colorDevPanelTitleText"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "desktop:Group Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxDevBoldGroup"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxDevCapsGroupNames"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelGroupTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevGroupTextLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelGroupLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelGroupText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelGroupLabelBg"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxDevBoldGroup",
+                      "checkboxDevCapsGroupNames",
+                      "sliderDevPanelGroupTitleFontSize",
+                      "sliderDevGroupTextLetterSpacing",
+                      "sliderDevPanelGroupLineHeight",
+                      "colorDevPanelGroupText",
+                      "colorDevPanelGroupLabelBg"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "desktop:Setting Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxDevCapsSettingsText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxDevBoldSettings"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelSettingTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelValueFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelSettingsLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevSettingsTextLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelNonTitleText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelSettingNumber"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxDevCapsSettingsText",
+                      "checkboxDevBoldSettings",
+                      "sliderDevPanelSettingTitleFontSize",
+                      "sliderDevPanelValueFontSize",
+                      "sliderDevPanelSettingsLineHeight",
+                      "sliderDevSettingsTextLetterSpacing",
+                      "colorDevPanelNonTitleText",
+                      "colorDevPanelSettingNumber"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "desktop:TABS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxDevBoldTab"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxDevCapsTabText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelTabFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevTabTextLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelTabLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelTabText"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxDevBoldTab",
+                      "checkboxDevCapsTabText",
+                      "sliderDevPanelTabFontSize",
+                      "sliderDevTabTextLetterSpacing",
+                      "sliderDevPanelTabLineHeight",
+                      "colorDevPanelTabText"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "desktop:BUTTONS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxDevBoldButton"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxDevCapsButtonText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelButtonFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevButtonTextLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelButtonLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelButtonText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelButtonHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxDevBoldButton",
+                      "checkboxDevCapsButtonText",
+                      "sliderDevPanelButtonFontSize",
+                      "sliderDevButtonTextLetterSpacing",
+                      "sliderDevPanelButtonLineHeight",
+                      "colorDevPanelButtonText",
+                      "sliderDevPanelButtonHeight"
+                    ],
+                    "subgroups": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "key": "desktop:Debug",
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:Mouse Log",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxMouseLogPosition"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMouseLogInterval"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxMouseLogScroll"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxMouseLogKeystrokes"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxMouseLogPosition",
+                    "sliderMouseLogInterval",
+                    "checkboxMouseLogScroll",
+                    "checkboxMouseLogKeystrokes"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:Pipeline Report",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "__row0"
+                    }
+                  ],
+                  "rowKeys": [
+                    "__row0"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:Path Data (JSON)",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "__row0"
+                    },
+                    {
+                      "type": "row",
+                      "key": "__row1"
+                    }
+                  ],
+                  "rowKeys": [
+                    "__row0",
+                    "__row1"
+                  ],
+                  "subgroups": []
+                }
+              }
+            ],
+            "rowKeys": [],
+            "subgroups": [
+              {
+                "key": "desktop:Mouse Log",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "checkboxMouseLogPosition"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMouseLogInterval"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxMouseLogScroll"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxMouseLogKeystrokes"
+                  }
+                ],
+                "rowKeys": [
+                  "checkboxMouseLogPosition",
+                  "sliderMouseLogInterval",
+                  "checkboxMouseLogScroll",
+                  "checkboxMouseLogKeystrokes"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "desktop:Pipeline Report",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "__row0"
+                  }
+                ],
+                "rowKeys": [
+                  "__row0"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "desktop:Path Data (JSON)",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "__row0"
+                  },
+                  {
+                    "type": "row",
+                    "key": "__row1"
+                  }
+                ],
+                "rowKeys": [
+                  "__row0",
+                  "__row1"
+                ],
+                "subgroups": []
+              }
+            ]
+          },
+          {
+            "key": "desktop:Font & Character",
+            "items": [
+              {
+                "type": "row",
+                "key": "__row0"
+              },
+              {
+                "type": "row",
+                "key": "__row1"
+              },
+              {
+                "type": "row",
+                "key": "__row2"
+              },
+              {
+                "type": "row",
+                "key": "__row3"
+              },
+              {
+                "type": "row",
+                "key": "__row4"
+              },
+              {
+                "type": "row",
+                "key": "__row5"
+              }
+            ],
+            "rowKeys": [
+              "__row0",
+              "__row1",
+              "__row2",
+              "__row3",
+              "__row4",
+              "__row5"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Text",
+            "items": [
+              {
+                "type": "row",
+                "key": "__row0"
+              },
+              {
+                "type": "row",
+                "key": "sliderRasterEmHeight"
+              },
+              {
+                "type": "row",
+                "key": "sliderWrapWidthPx"
+              },
+              {
+                "type": "row",
+                "key": "sliderLineHeightEm"
+              },
+              {
+                "type": "row",
+                "key": "checkboxUseKerning"
+              },
+              {
+                "type": "row",
+                "key": "sliderLetterSpacingUnits"
+              }
+            ],
+            "rowKeys": [
+              "__row0",
+              "sliderRasterEmHeight",
+              "sliderWrapWidthPx",
+              "sliderLineHeightEm",
+              "checkboxUseKerning",
+              "sliderLetterSpacingUnits"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:View",
+            "items": [
+              {
+                "type": "row",
+                "key": "__row0"
+              },
+              {
+                "type": "row",
+                "key": "checkboxAutoFit"
+              },
+              {
+                "type": "row",
+                "key": "sliderZoomSpeed"
+              }
+            ],
+            "rowKeys": [
+              "__row0",
+              "checkboxAutoFit",
+              "sliderZoomSpeed"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Layers",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxLayerGlyphFill"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerGlyphOutline"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerMask"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerRawSkeleton"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerRawPolyline"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerCleanSkeleton"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerNodes"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerTraversal"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerConnectors"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerOrder"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerDot"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLayerTween"
+              }
+            ],
+            "rowKeys": [
+              "checkboxLayerGlyphFill",
+              "checkboxLayerGlyphOutline",
+              "checkboxLayerMask",
+              "checkboxLayerRawSkeleton",
+              "checkboxLayerRawPolyline",
+              "checkboxLayerCleanSkeleton",
+              "checkboxLayerNodes",
+              "checkboxLayerTraversal",
+              "checkboxLayerConnectors",
+              "checkboxLayerOrder",
+              "checkboxLayerDot",
+              "checkboxLayerTween"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Path",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxPathThicknessEnabled"
+              },
+              {
+                "type": "row",
+                "key": "sliderPathThickness"
+              },
+              {
+                "type": "row",
+                "key": "colorPathColor"
+              },
+              {
+                "type": "row",
+                "key": "checkboxProgressiveThickness"
+              },
+              {
+                "type": "row",
+                "key": "checkboxAdaptiveThickness"
+              }
+            ],
+            "rowKeys": [
+              "checkboxPathThicknessEnabled",
+              "sliderPathThickness",
+              "colorPathColor",
+              "checkboxProgressiveThickness",
+              "checkboxAdaptiveThickness"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Path Tween",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxPathTweenEnabled"
+              },
+              {
+                "type": "row",
+                "key": "sliderTweenProgression"
+              },
+              {
+                "type": "row",
+                "key": "sliderTweenRadiusScale"
+              },
+              {
+                "type": "row",
+                "key": "sliderTweenRadiusSmoothing"
+              },
+              {
+                "type": "row",
+                "key": "sliderTweenNormalSmoothing"
+              },
+              {
+                "type": "row",
+                "key": "sliderTweenResampleSpacing"
+              },
+              {
+                "type": "row",
+                "key": "sliderTweenExtendTerminals"
+              },
+              {
+                "type": "row",
+                "key": "checkboxTweenBothSides"
+              },
+              {
+                "type": "row",
+                "key": "checkboxTweenJoinIntersections"
+              },
+              {
+                "type": "row",
+                "key": "selectTweenJoinStyle"
+              },
+              {
+                "type": "row",
+                "key": "sliderTweenJoinSharpAngle"
+              },
+              {
+                "type": "row",
+                "key": "sliderTweenJoinCornerRadius"
+              },
+              {
+                "type": "row",
+                "key": "sliderTweenJoinMiterLimit"
+              }
+            ],
+            "rowKeys": [
+              "checkboxPathTweenEnabled",
+              "sliderTweenProgression",
+              "sliderTweenRadiusScale",
+              "sliderTweenRadiusSmoothing",
+              "sliderTweenNormalSmoothing",
+              "sliderTweenResampleSpacing",
+              "sliderTweenExtendTerminals",
+              "checkboxTweenBothSides",
+              "checkboxTweenJoinIntersections",
+              "selectTweenJoinStyle",
+              "sliderTweenJoinSharpAngle",
+              "sliderTweenJoinCornerRadius",
+              "sliderTweenJoinMiterLimit"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Animation",
+            "items": [
+              {
+                "type": "row",
+                "key": "__row0"
+              },
+              {
+                "type": "row",
+                "key": "selectAnimationPath"
+              },
+              {
+                "type": "row",
+                "key": "checkboxAnimLoop"
+              },
+              {
+                "type": "row",
+                "key": "sliderAnimSpeed"
+              },
+              {
+                "type": "row",
+                "key": "sliderAnimScrub"
+              },
+              {
+                "type": "row",
+                "key": "__row5"
+              }
+            ],
+            "rowKeys": [
+              "__row0",
+              "selectAnimationPath",
+              "checkboxAnimLoop",
+              "sliderAnimSpeed",
+              "sliderAnimScrub",
+              "__row5"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Rasterisation",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderRasterPadding"
+              },
+              {
+                "type": "row",
+                "key": "sliderAlphaThreshold"
+              }
+            ],
+            "rowKeys": [
+              "sliderRasterPadding",
+              "sliderAlphaThreshold"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Skeletonisation",
+            "items": [
+              {
+                "type": "row",
+                "key": "selectThinningAlgorithm"
+              },
+              {
+                "type": "row",
+                "key": "checkboxRemoveRedundantPixels"
+              },
+              {
+                "type": "row",
+                "key": "sliderMaxThinningIterations"
+              }
+            ],
+            "rowKeys": [
+              "selectThinningAlgorithm",
+              "checkboxRemoveRedundantPixels",
+              "sliderMaxThinningIterations"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Cleanup",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxRemoveIsolatedPixels"
+              },
+              {
+                "type": "row",
+                "key": "sliderMinSourceAreaPx"
+              },
+              {
+                "type": "row",
+                "key": "sliderMinBranchLengthPx"
+              },
+              {
+                "type": "row",
+                "key": "sliderPruneIterations"
+              },
+              {
+                "type": "row",
+                "key": "checkboxMergeAdjacentJunctions"
+              },
+              {
+                "type": "row",
+                "key": "sliderSimplifyTolerancePx"
+              },
+              {
+                "type": "row",
+                "key": "sliderSmoothingPasses"
+              },
+              {
+                "type": "row",
+                "key": "sliderSmoothingStrength"
+              },
+              {
+                "type": "row",
+                "key": "checkboxPreserveEndpointsWhileSmoothing"
+              }
+            ],
+            "rowKeys": [
+              "checkboxRemoveIsolatedPixels",
+              "sliderMinSourceAreaPx",
+              "sliderMinBranchLengthPx",
+              "sliderPruneIterations",
+              "checkboxMergeAdjacentJunctions",
+              "sliderSimplifyTolerancePx",
+              "sliderSmoothingPasses",
+              "sliderSmoothingStrength",
+              "checkboxPreserveEndpointsWhileSmoothing"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Traversal",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxNearestRouting"
+              },
+              {
+                "type": "row",
+                "key": "checkboxGroupByLetter"
+              },
+              {
+                "type": "row",
+                "key": "sliderRightwardBias"
+              },
+              {
+                "type": "row",
+                "key": "checkboxTweenEntryAtEndpoints"
+              },
+              {
+                "type": "row",
+                "key": "checkboxEmitConnectors"
+              },
+              {
+                "type": "row",
+                "key": "sliderTraversalResampleSpacingPx"
+              }
+            ],
+            "rowKeys": [
+              "checkboxNearestRouting",
+              "checkboxGroupByLetter",
+              "sliderRightwardBias",
+              "checkboxTweenEntryAtEndpoints",
+              "checkboxEmitConnectors",
+              "sliderTraversalResampleSpacingPx"
+            ],
+            "subgroups": []
+          }
+        ],
+        "mobileTabContent": [
+          {
+            "key": "mobile:Dev Panel",
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:MECHANICS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelScrollStrength"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelScrollStrength"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:PANEL UI",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:TEXT",
+                  "items": [
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "mobile:Dev Panel Title",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelTitleFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelTitleLetterSpacing"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelTitleLineHeight"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelButtonTextBorder"
+                          }
+                        ],
+                        "rowKeys": [
+                          "sliderMobileDevPanelTitleFontSize",
+                          "sliderMobileDevPanelTitleLetterSpacing",
+                          "sliderMobileDevPanelTitleLineHeight",
+                          "sliderMobileDevPanelButtonTextBorder"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "mobile:Group Title",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelGroupTitleFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelGroupLineHeight"
+                          }
+                        ],
+                        "rowKeys": [
+                          "sliderMobileDevPanelGroupTitleFontSize",
+                          "sliderMobileDevPanelGroupLineHeight"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "mobile:Setting Title",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelSettingTitleFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelValueFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelSettingsLineHeight"
+                          }
+                        ],
+                        "rowKeys": [
+                          "sliderMobileDevPanelSettingTitleFontSize",
+                          "sliderMobileDevPanelValueFontSize",
+                          "sliderMobileDevPanelSettingsLineHeight"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "mobile:TABS",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelTabFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelTabLineHeight"
+                          }
+                        ],
+                        "rowKeys": [
+                          "sliderMobileDevPanelTabFontSize",
+                          "sliderMobileDevPanelTabLineHeight"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "mobile:BUTTONS",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelButtonFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelButtonLineHeight"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderMobileDevPanelButtonHeight"
+                          }
+                        ],
+                        "rowKeys": [
+                          "sliderMobileDevPanelButtonFontSize",
+                          "sliderMobileDevPanelButtonLineHeight",
+                          "sliderMobileDevPanelButtonHeight"
+                        ],
+                        "subgroups": []
+                      }
+                    }
+                  ],
+                  "rowKeys": [],
+                  "subgroups": [
+                    {
+                      "key": "mobile:Dev Panel Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelTitleLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelTitleLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelButtonTextBorder"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderMobileDevPanelTitleFontSize",
+                        "sliderMobileDevPanelTitleLetterSpacing",
+                        "sliderMobileDevPanelTitleLineHeight",
+                        "sliderMobileDevPanelButtonTextBorder"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "mobile:Group Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelGroupTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelGroupLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderMobileDevPanelGroupTitleFontSize",
+                        "sliderMobileDevPanelGroupLineHeight"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "mobile:Setting Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelSettingTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelValueFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelSettingsLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderMobileDevPanelSettingTitleFontSize",
+                        "sliderMobileDevPanelValueFontSize",
+                        "sliderMobileDevPanelSettingsLineHeight"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "mobile:TABS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelTabFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelTabLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderMobileDevPanelTabFontSize",
+                        "sliderMobileDevPanelTabLineHeight"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "mobile:BUTTONS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelButtonFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelButtonLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelButtonHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderMobileDevPanelButtonFontSize",
+                        "sliderMobileDevPanelButtonLineHeight",
+                        "sliderMobileDevPanelButtonHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  ]
+                }
+              }
+            ],
+            "rowKeys": [],
+            "subgroups": [
+              {
+                "key": "mobile:MECHANICS",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelScrollStrength"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderMobileDevPanelScrollStrength"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "mobile:PANEL UI",
+                "items": [],
+                "rowKeys": [],
+                "subgroups": []
+              },
+              {
+                "key": "mobile:TEXT",
+                "items": [
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "mobile:Dev Panel Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelTitleLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelTitleLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelButtonTextBorder"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderMobileDevPanelTitleFontSize",
+                        "sliderMobileDevPanelTitleLetterSpacing",
+                        "sliderMobileDevPanelTitleLineHeight",
+                        "sliderMobileDevPanelButtonTextBorder"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "mobile:Group Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelGroupTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelGroupLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderMobileDevPanelGroupTitleFontSize",
+                        "sliderMobileDevPanelGroupLineHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "mobile:Setting Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelSettingTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelValueFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelSettingsLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderMobileDevPanelSettingTitleFontSize",
+                        "sliderMobileDevPanelValueFontSize",
+                        "sliderMobileDevPanelSettingsLineHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "mobile:TABS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelTabFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelTabLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderMobileDevPanelTabFontSize",
+                        "sliderMobileDevPanelTabLineHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "mobile:BUTTONS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelButtonFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelButtonLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderMobileDevPanelButtonHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderMobileDevPanelButtonFontSize",
+                        "sliderMobileDevPanelButtonLineHeight",
+                        "sliderMobileDevPanelButtonHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  }
+                ],
+                "rowKeys": [],
+                "subgroups": [
+                  {
+                    "key": "mobile:Dev Panel Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelTitleLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelTitleLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelButtonTextBorder"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderMobileDevPanelTitleFontSize",
+                      "sliderMobileDevPanelTitleLetterSpacing",
+                      "sliderMobileDevPanelTitleLineHeight",
+                      "sliderMobileDevPanelButtonTextBorder"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "mobile:Group Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelGroupTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelGroupLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderMobileDevPanelGroupTitleFontSize",
+                      "sliderMobileDevPanelGroupLineHeight"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "mobile:Setting Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelSettingTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelValueFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelSettingsLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderMobileDevPanelSettingTitleFontSize",
+                      "sliderMobileDevPanelValueFontSize",
+                      "sliderMobileDevPanelSettingsLineHeight"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "mobile:TABS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelTabFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelTabLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderMobileDevPanelTabFontSize",
+                      "sliderMobileDevPanelTabLineHeight"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "mobile:BUTTONS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelButtonFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelButtonLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelButtonHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderMobileDevPanelButtonFontSize",
+                      "sliderMobileDevPanelButtonLineHeight",
+                      "sliderMobileDevPanelButtonHeight"
+                    ],
+                    "subgroups": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "key": "mobile:Debug",
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:Pipeline Report",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:Path Data (JSON)",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              }
+            ],
+            "rowKeys": [],
+            "subgroups": [
+              {
+                "key": "mobile:Pipeline Report",
+                "items": [],
+                "rowKeys": [],
+                "subgroups": []
+              },
+              {
+                "key": "mobile:Path Data (JSON)",
+                "items": [],
+                "rowKeys": [],
+                "subgroups": []
+              }
+            ]
+          },
+          {
+            "key": "mobile:Font & Character",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Text",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:View",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Layers",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Path",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Path Tween",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Animation",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Rasterisation",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Skeletonisation",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Cleanup",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Traversal",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          }
+        ],
+        "landscapeTabContent": [
+          {
+            "key": "landscape:Dev Panel",
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:MECHANICS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelScrollStrength"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelScrollStrength"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:PANEL UI",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:TEXT",
+                  "items": [
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "landscape:Dev Panel Title",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelTitleFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelTitleLetterSpacing"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelTitleLineHeight"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelButtonTextBorder"
+                          }
+                        ],
+                        "rowKeys": [
+                          "sliderLandscapeDevPanelTitleFontSize",
+                          "sliderLandscapeDevPanelTitleLetterSpacing",
+                          "sliderLandscapeDevPanelTitleLineHeight",
+                          "sliderLandscapeDevPanelButtonTextBorder"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "landscape:Group Title",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelGroupTitleFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelGroupLineHeight"
+                          }
+                        ],
+                        "rowKeys": [
+                          "sliderLandscapeDevPanelGroupTitleFontSize",
+                          "sliderLandscapeDevPanelGroupLineHeight"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "landscape:Setting Title",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelSettingTitleFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelValueFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelSettingsLineHeight"
+                          }
+                        ],
+                        "rowKeys": [
+                          "sliderLandscapeDevPanelSettingTitleFontSize",
+                          "sliderLandscapeDevPanelValueFontSize",
+                          "sliderLandscapeDevPanelSettingsLineHeight"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "landscape:TABS",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelTabFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelTabLineHeight"
+                          }
+                        ],
+                        "rowKeys": [
+                          "sliderLandscapeDevPanelTabFontSize",
+                          "sliderLandscapeDevPanelTabLineHeight"
+                        ],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "landscape:BUTTONS",
+                        "items": [
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelButtonFontSize"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelButtonLineHeight"
+                          },
+                          {
+                            "type": "row",
+                            "key": "sliderLandscapeDevPanelButtonHeight"
+                          }
+                        ],
+                        "rowKeys": [
+                          "sliderLandscapeDevPanelButtonFontSize",
+                          "sliderLandscapeDevPanelButtonLineHeight",
+                          "sliderLandscapeDevPanelButtonHeight"
+                        ],
+                        "subgroups": []
+                      }
+                    }
+                  ],
+                  "rowKeys": [],
+                  "subgroups": [
+                    {
+                      "key": "landscape:Dev Panel Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelTitleLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelTitleLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelButtonTextBorder"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderLandscapeDevPanelTitleFontSize",
+                        "sliderLandscapeDevPanelTitleLetterSpacing",
+                        "sliderLandscapeDevPanelTitleLineHeight",
+                        "sliderLandscapeDevPanelButtonTextBorder"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "landscape:Group Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelGroupTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelGroupLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderLandscapeDevPanelGroupTitleFontSize",
+                        "sliderLandscapeDevPanelGroupLineHeight"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "landscape:Setting Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelSettingTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelValueFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelSettingsLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderLandscapeDevPanelSettingTitleFontSize",
+                        "sliderLandscapeDevPanelValueFontSize",
+                        "sliderLandscapeDevPanelSettingsLineHeight"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "landscape:TABS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelTabFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelTabLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderLandscapeDevPanelTabFontSize",
+                        "sliderLandscapeDevPanelTabLineHeight"
+                      ],
+                      "subgroups": []
+                    },
+                    {
+                      "key": "landscape:BUTTONS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelButtonFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelButtonLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelButtonHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderLandscapeDevPanelButtonFontSize",
+                        "sliderLandscapeDevPanelButtonLineHeight",
+                        "sliderLandscapeDevPanelButtonHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  ]
+                }
+              }
+            ],
+            "rowKeys": [],
+            "subgroups": [
+              {
+                "key": "landscape:MECHANICS",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelScrollStrength"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderLandscapeDevPanelScrollStrength"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "landscape:PANEL UI",
+                "items": [],
+                "rowKeys": [],
+                "subgroups": []
+              },
+              {
+                "key": "landscape:TEXT",
+                "items": [
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "landscape:Dev Panel Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelTitleLetterSpacing"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelTitleLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelButtonTextBorder"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderLandscapeDevPanelTitleFontSize",
+                        "sliderLandscapeDevPanelTitleLetterSpacing",
+                        "sliderLandscapeDevPanelTitleLineHeight",
+                        "sliderLandscapeDevPanelButtonTextBorder"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "landscape:Group Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelGroupTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelGroupLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderLandscapeDevPanelGroupTitleFontSize",
+                        "sliderLandscapeDevPanelGroupLineHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "landscape:Setting Title",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelSettingTitleFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelValueFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelSettingsLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderLandscapeDevPanelSettingTitleFontSize",
+                        "sliderLandscapeDevPanelValueFontSize",
+                        "sliderLandscapeDevPanelSettingsLineHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "landscape:TABS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelTabFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelTabLineHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderLandscapeDevPanelTabFontSize",
+                        "sliderLandscapeDevPanelTabLineHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "landscape:BUTTONS",
+                      "items": [
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelButtonFontSize"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelButtonLineHeight"
+                        },
+                        {
+                          "type": "row",
+                          "key": "sliderLandscapeDevPanelButtonHeight"
+                        }
+                      ],
+                      "rowKeys": [
+                        "sliderLandscapeDevPanelButtonFontSize",
+                        "sliderLandscapeDevPanelButtonLineHeight",
+                        "sliderLandscapeDevPanelButtonHeight"
+                      ],
+                      "subgroups": []
+                    }
+                  }
+                ],
+                "rowKeys": [],
+                "subgroups": [
+                  {
+                    "key": "landscape:Dev Panel Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelTitleLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelTitleLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelButtonTextBorder"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderLandscapeDevPanelTitleFontSize",
+                      "sliderLandscapeDevPanelTitleLetterSpacing",
+                      "sliderLandscapeDevPanelTitleLineHeight",
+                      "sliderLandscapeDevPanelButtonTextBorder"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "landscape:Group Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelGroupTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelGroupLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderLandscapeDevPanelGroupTitleFontSize",
+                      "sliderLandscapeDevPanelGroupLineHeight"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "landscape:Setting Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelSettingTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelValueFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelSettingsLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderLandscapeDevPanelSettingTitleFontSize",
+                      "sliderLandscapeDevPanelValueFontSize",
+                      "sliderLandscapeDevPanelSettingsLineHeight"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "landscape:TABS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelTabFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelTabLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderLandscapeDevPanelTabFontSize",
+                      "sliderLandscapeDevPanelTabLineHeight"
+                    ],
+                    "subgroups": []
+                  },
+                  {
+                    "key": "landscape:BUTTONS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelButtonFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelButtonLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelButtonHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderLandscapeDevPanelButtonFontSize",
+                      "sliderLandscapeDevPanelButtonLineHeight",
+                      "sliderLandscapeDevPanelButtonHeight"
+                    ],
+                    "subgroups": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "key": "landscape:Debug",
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:Pipeline Report",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:Path Data (JSON)",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              }
+            ],
+            "rowKeys": [],
+            "subgroups": [
+              {
+                "key": "landscape:Pipeline Report",
+                "items": [],
+                "rowKeys": [],
+                "subgroups": []
+              },
+              {
+                "key": "landscape:Path Data (JSON)",
+                "items": [],
+                "rowKeys": [],
+                "subgroups": []
+              }
+            ]
+          },
+          {
+            "key": "landscape:Font & Character",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Text",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:View",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Layers",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Path",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Path Tween",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Animation",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Rasterisation",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Skeletonisation",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Cleanup",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Traversal",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          }
+        ]
+      },
+      "sectionCollapseState": {
+        "desktop:Saved Dev Settings": false,
+        "desktop:Dev Panel": false,
+        "desktop:MECHANICS": false,
+        "desktop:PANEL UI": false,
+        "desktop:TEXT": false,
+        "desktop:Dev Panel Title": false,
+        "desktop:Group Title": false,
+        "desktop:Setting Title": false,
+        "desktop:TABS": false,
+        "desktop:BUTTONS": false,
+        "desktop:Debug": false,
+        "desktop:Mouse Log": false,
+        "desktop:Pipeline Report": false,
+        "desktop:Path Data (JSON)": false,
+        "desktop:Font & Character": false,
+        "desktop:Text": false,
+        "desktop:View": false,
+        "desktop:Layers": false,
+        "desktop:Path": false,
+        "desktop:Path Tween": false,
+        "desktop:Animation": false,
+        "desktop:Rasterisation": false,
+        "desktop:Skeletonisation": false,
+        "desktop:Cleanup": false,
+        "desktop:Traversal": false,
+        "mobile:Dev Panel": false,
+        "mobile:MECHANICS": false,
+        "mobile:PANEL UI": false,
+        "mobile:TEXT": false,
+        "mobile:Dev Panel Title": false,
+        "mobile:Group Title": false,
+        "mobile:Setting Title": false,
+        "mobile:TABS": false,
+        "mobile:BUTTONS": false,
+        "mobile:Debug": false,
+        "mobile:Pipeline Report": false,
+        "mobile:Path Data (JSON)": false,
+        "mobile:Font & Character": false,
+        "mobile:Text": false,
+        "mobile:View": false,
+        "mobile:Layers": false,
+        "mobile:Path": false,
+        "mobile:Path Tween": false,
+        "mobile:Animation": false,
+        "mobile:Rasterisation": false,
+        "mobile:Skeletonisation": false,
+        "mobile:Cleanup": false,
+        "mobile:Traversal": false,
+        "landscape:Dev Panel": false,
+        "landscape:MECHANICS": false,
+        "landscape:PANEL UI": false,
+        "landscape:TEXT": false,
+        "landscape:Dev Panel Title": false,
+        "landscape:Group Title": false,
+        "landscape:Setting Title": false,
+        "landscape:TABS": false,
+        "landscape:BUTTONS": false,
+        "landscape:Debug": false,
+        "landscape:Pipeline Report": false,
+        "landscape:Path Data (JSON)": false,
+        "landscape:Font & Character": false,
+        "landscape:Text": false,
+        "landscape:View": false,
+        "landscape:Layers": false,
+        "landscape:Path": false,
+        "landscape:Path Tween": false,
+        "landscape:Animation": false,
+        "landscape:Rasterisation": false,
+        "landscape:Skeletonisation": false,
+        "landscape:Cleanup": false,
+        "landscape:Traversal": false
+      },
+      "devTextOverrides": {
+        "sliderMobileDevPanelTitleFontSize": null,
+        "sliderMobileDevPanelTabFontSize": null,
+        "sliderMobileDevPanelGroupTitleFontSize": null,
+        "sliderMobileDevPanelSettingTitleFontSize": null,
+        "sliderMobileDevPanelButtonTextBorder": null,
+        "sliderMobileDevPanelScrollStrength": null,
+        "sliderMobileDevPanelButtonHeight": null,
+        "sliderMobileDevPanelValueFontSize": null,
+        "sliderMobileDevPanelTitleLetterSpacing": null,
+        "sliderMobileDevPanelTitleLineHeight": null,
+        "sliderMobileDevPanelTabLineHeight": null,
+        "sliderMobileDevPanelGroupLineHeight": null,
+        "sliderMobileDevPanelSettingsLineHeight": null,
+        "sliderMobileDevPanelButtonLineHeight": null,
+        "sliderMobileDevPanelButtonFontSize": null,
+        "mobile:Dev Panel": null,
+        "mobile:Pipeline Report": null,
+        "mobile:Path Data (JSON)": null,
+        "mobile:Debug": null,
+        "mobile:Font & Character": null,
+        "mobile:Text": null,
+        "mobile:View": null,
+        "mobile:Layers": null,
+        "mobile:Path": null,
+        "mobile:Path Tween": null,
+        "mobile:Animation": null,
+        "mobile:Rasterisation": null,
+        "mobile:Skeletonisation": null,
+        "mobile:Cleanup": null,
+        "mobile:Traversal": null,
+        "sliderLandscapeDevPanelTitleFontSize": null,
+        "sliderLandscapeDevPanelTabFontSize": null,
+        "sliderLandscapeDevPanelGroupTitleFontSize": null,
+        "sliderLandscapeDevPanelSettingTitleFontSize": null,
+        "sliderLandscapeDevPanelButtonTextBorder": null,
+        "sliderLandscapeDevPanelScrollStrength": null,
+        "sliderLandscapeDevPanelButtonHeight": null,
+        "sliderLandscapeDevPanelValueFontSize": null,
+        "sliderLandscapeDevPanelTitleLetterSpacing": null,
+        "sliderLandscapeDevPanelTitleLineHeight": null,
+        "sliderLandscapeDevPanelTabLineHeight": null,
+        "sliderLandscapeDevPanelGroupLineHeight": null,
+        "sliderLandscapeDevPanelSettingsLineHeight": null,
+        "sliderLandscapeDevPanelButtonLineHeight": null,
+        "sliderLandscapeDevPanelButtonFontSize": null,
+        "landscape:Dev Panel": null,
+        "landscape:Pipeline Report": null,
+        "landscape:Path Data (JSON)": null,
+        "landscape:Debug": null,
+        "landscape:Font & Character": null,
+        "landscape:Text": null,
+        "landscape:View": null,
+        "landscape:Layers": null,
+        "landscape:Path": null,
+        "landscape:Path Tween": null,
+        "landscape:Animation": null,
+        "landscape:Rasterisation": null,
+        "landscape:Skeletonisation": null,
+        "landscape:Cleanup": null,
+        "landscape:Traversal": null
+      },
+      "devTextOverridesManual": [],
+      "lockedGroups": [],
+      "textEditModeEnabled": false,
+      "devVisibility": {},
+      "devIndependence": {
+        "mobile": {},
+        "landscape": {}
+      },
+      "devDeviceValues": {
+        "mobile": {},
+        "landscape": {}
+      }
+    }
+  },
+  "files": []
+}
