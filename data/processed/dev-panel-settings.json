@@ -11,6 +11,12 @@
       "fileName": "DancingScript-Regular.ttf",
       "size": 133636,
       "path": "data/processed/fonts/DancingScript-Regular.ttf"
+    },
+    {
+      "key": "SaveProbe-Gelasio",
+      "fileName": "SaveProbe-Gelasio.ttf",
+      "size": 168556,
+      "path": "data/processed/fonts/SaveProbe-Gelasio.ttf"
     }
   ],
   "devPanel": {
@@ -50,6 +56,8 @@
       "sliderTweenResampleSpacing": 2,
       "sliderTweenExtendTerminals": 0,
       "checkboxTweenBothSides": true,
+      "sliderTweenJoinProximity": 9,
+      "checkboxTweenLoopSingleCurves": false,
       "checkboxTweenJoinIntersections": true,
       "selectTweenJoinStyle": "auto",
       "sliderTweenJoinSharpAngle": 60,
@@ -1395,6 +1403,14 @@
             {
               "type": "row",
               "key": "__row5"
+            },
+            {
+              "type": "row",
+              "key": "__row6"
+            },
+            {
+              "type": "row",
+              "key": "__row7"
             }
           ],
           "rowKeys": [
@@ -1403,7 +1419,9 @@
             "__row2",
             "__row3",
             "__row4",
-            "__row5"
+            "__row5",
+            "__row6",
+            "__row7"
           ],
           "subgroups": []
         },
@@ -1589,6 +1607,14 @@
           "items": [
             {
               "type": "row",
+              "key": "sliderTweenJoinProximity"
+            },
+            {
+              "type": "row",
+              "key": "checkboxTweenLoopSingleCurves"
+            },
+            {
+              "type": "row",
               "key": "checkboxPathTweenEnabled"
             },
             {
@@ -1641,6 +1667,8 @@
             }
           ],
           "rowKeys": [
+            "sliderTweenJoinProximity",
+            "checkboxTweenLoopSingleCurves",
             "checkboxPathTweenEnabled",
             "sliderTweenProgression",
             "sliderTweenRadiusScale",
@@ -3314,7 +3342,107 @@
         ],
         "savedAt": 1790150126418
       }
+    ],
+    "Gelasio-Regular\u0000A": [
+      {
+        "anchors": [
+          {
+            "x": 0,
+            "y": 1,
+            "letter": null
+          },
+          {
+            "x": 0.1446,
+            "y": 0.9804,
+            "letter": null
+          },
+          {
+            "x": 0.1446,
+            "y": 0.9804,
+            "letter": null
+          },
+          {
+            "x": 0.2711,
+            "y": 0.5893,
+            "letter": null
+          },
+          {
+            "x": 0.6988,
+            "y": 0.5632,
+            "letter": null
+          },
+          {
+            "x": 0.8193,
+            "y": 0.9544,
+            "letter": null
+          },
+          {
+            "x": 0.8193,
+            "y": 0.9544,
+            "letter": null
+          },
+          {
+            "x": 0.6988,
+            "y": 0.5632,
+            "letter": null
+          }
+        ],
+        "savedAt": 1790152926722
+      }
     ]
   },
-  "lastSaveStamp": "1790150289423-96l3nxco"
+  "lastSaveStamp": "1790152926722-a6wx308t",
+  "fontSettings": {
+    "Gelasio-Regular": {
+      "memory": {
+        "config": {
+          "rasterEmHeight": 256,
+          "wrapWidthPx": 900,
+          "lineHeightEm": 1.25,
+          "useKerning": true,
+          "letterSpacingUnits": 0,
+          "rasterPadding": 4,
+          "alphaThreshold": 128,
+          "thinningAlgorithm": "zhang-suen",
+          "removeRedundantPixels": true,
+          "maxThinningIterations": 400,
+          "removeIsolatedPixels": true,
+          "minSourceAreaPx": 24,
+          "minBranchLengthPx": 12,
+          "pruneIterations": 3,
+          "mergeAdjacentJunctions": true,
+          "simplifyTolerancePx": 0.8,
+          "smoothingPasses": 1,
+          "smoothingStrength": 0.6,
+          "preserveEndpointsWhileSmoothing": true
+        },
+        "view": {
+          "pathThicknessEnabled": false,
+          "pathThicknessPx": 8,
+          "pathColor": "#31d67a",
+          "progressiveThickness": false,
+          "adaptiveThickness": false,
+          "strokeRoundCap": false
+        },
+        "tween": {
+          "enabled": false,
+          "progression": 0.5,
+          "radiusScale": 1,
+          "radiusSmoothing": 2,
+          "normalSmoothing": 2,
+          "resampleSpacingPx": 2,
+          "extendTerminalsPx": 0,
+          "bothSides": true,
+          "joinIntersections": true,
+          "joinStyle": "auto",
+          "joinSharpAngleDeg": 60,
+          "joinCornerRadiusPx": 4,
+          "joinMiterLimit": 4,
+          "joinProximityPx": 9,
+          "loopSingleCurves": false
+        }
+      },
+      "presets": []
+    }
+  }
 }
