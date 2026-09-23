@@ -1834,6 +1834,49 @@ window.fontLab.build now answers "which build is that tab running" in
 one line.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  5:35 AM - 5:38 AM
+
+The status line was reported verbatim:
+  "Saved locally only - remote save unavailable (no endpoint)."
+
+That one string is decisive, and it FALSIFIES the stale-tab theory from
+the two previous entries. "no endpoint" is the fallback used only when
+`res.error` is falsy, i.e. the response carried NO parseable JSON error.
+A stale build sends no save key, the server answers that with a 401 AND
+a JSON body, so `data.error` would be "Unauthorized" and the message
+would have read "(Unauthorized)". It did not. Localhost has its own
+message. A thrown fetch prints the exception text.
+
+What remains is a 404. Confirmed on this host: an unknown path returns
+`content-type: text/plain`, so `resp.json()` throws, `data` ends up {},
+and `error` is undefined - producing exactly "no endpoint". Meanwhile
+the production endpoint is live: GET 200, POST 401 without a key.
+
+So the POST is reaching an origin that has no save endpoint. Since
+SETTINGS_ENDPOINT is origin-absolute ('/api/save-settings'), that means
+the page itself is being served from somewhere other than the
+production deployment - a stale immutable deployment URL, a preview/
+branch URL, or a plain static server.
+
+Fixed the thing that made three rounds of diagnosis necessary: the
+message named neither the status nor the URL. It now reports the full
+URL it tried and the HTTP status, with specific text for 404 ("there is
+no save endpoint at this origin") and for status 0 (host unreachable).
+Severity raised warn -> error; a failed repo save was previously easy to
+read as success.
+
+Verified live at build 21 by forcing the exact failure - POST rerouted
+to a nonexistent path - which produced:
+  "Saved to localStorage only. The repo save failed:
+   https://fontso.vercel.app/api/save-settings returned 404 - there is
+   no save endpoint at this origin. A Vercel deployment serves it from
+   api/save-settings.js; a plain static server does not."
+
+Lesson worth keeping: three separate diagnostic rounds were spent on a
+message too vague to distinguish its own causes. The status code and
+the URL were available at the point of failure the whole time.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
