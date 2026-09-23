@@ -147,6 +147,16 @@ The two marked "Hit here" were hit in this project and are not theoretical.
   latter. It must stay a **redirect, not a rewrite** — a rewrite keeps
   the URL at `/`, so every relative path in `lab/index.html` resolves
   against the root and 404s. (Hit here, 2026-09-22.)
+- **There are TWO server implementations of `/api/save-settings` and they
+  must be kept in step.** `scripts/active/serve.py` (local) and
+  `api/save-settings.js` (Vercel) both answer the same endpoint for the
+  same client. Font saving was written into the Python one only, so
+  imported fonts persisted locally and silently never did on the
+  deployment - and the JS one meanwhile committed the whole POST body,
+  embedding font bytes into the settings document. When you change
+  either side's request or response contract, change both, and test
+  against the DEPLOYMENT rather than the local server, which is the half
+  that was already correct. (Hit here, 2026-09-23.)
 - **`python -m http.server` cannot serve this project** — it sends `.mjs`
   as `text/plain` and every engine import fails. Use `serve.py`.
 - **A local static server in the Claude Code sandbox can intermittently

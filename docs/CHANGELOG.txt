@@ -1232,6 +1232,73 @@ directly.
   Neue 4, Dancing Script 6.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  2:55 AM - 3:03 AM
+
+The save secret was entered by the user, completing the revert to the
+sibling convention. Verifying it end to end then exposed a SECOND,
+unrelated cause of the original "fonts don't persist on Vercel" report.
+
+Secret verified working:
+- Sync's POST returns {"ok":true,"commitSha":...} - a real commit.
+- Control: the same POST without the secret returns 401. The pair is the
+  proof; either alone would be ambiguous.
+
+THE SECOND BUG. Font saving was implemented ONLY in
+scripts/active/serve.py, whose POST loops body.files, writes each as its
+own repo file, and returns `written`. api/save-settings.js never got
+that half. It committed the ENTIRE posted body as the settings document,
+so:
+- the base64 font bytes were embedded INTO dev-panel-settings.json,
+  exactly the failure fontStore.mjs was written to avoid (a font is
+  250KB-1.8MB, base64 inflates it by a third, and Sync rewrites the
+  whole settings document every run - so embedding means a fresh
+  multi-megabyte git object per save);
+- the document's top level became {settings, files} instead of the
+  settings themselves;
+- no files were reported written, hence "Saved 0 file(s)" while two
+  fonts sat in the store.
+
+This is why imported fonts persisted against a local server and silently
+never did on the deployment - a second cause sitting behind the missing
+GITHUB_REPO, and only reachable once the first was fixed.
+
+Fixed:
+- Ported serve.py's logic into api/save-settings.js, kept deliberately
+  parallel to it: each file written individually through a
+  create-or-update helper, only body.settings written to the settings
+  document, every written path returned.
+- Client-supplied paths containing '..' or a leading slash are refused
+  outright rather than normalised. The token behind this call can write
+  anywhere in the repo, so a path that merely looks safe after
+  normalisation is not good enough.
+- Repaired the corrupted document: unwrapped to the real settings and
+  dropped the embedded bytes, 498,870 -> 108,781 bytes (78.2%). Left
+  alone it would have persisted indefinitely, because the client does
+  GET -> merge -> POST: the next save would have nested settings.settings
+  and carried the font bytes forward again.
+
+Verified (live, https://fontso.vercel.app, after deploy):
+- Sync of two imported fonts returns written: [
+  data/processed/fonts/ComicNeue-Regular.ttf,
+  data/processed/fonts/DancingScript-Regular.ttf,
+  data/processed/dev-panel-settings.json ], commitSha 8ff07109.
+- GitHub confirms both as their own files at their real byte sizes
+  (57,248 and 133,636) - not embedded - and the settings document at
+  109,670 bytes rather than half a megabyte.
+- COLD RELOAD of the deployment restores both from the repo, listed
+  without the "(unsaved)" marker, and selecting one runs the pipeline
+  (Comic Neue, 4 segments on 'A'). That is the full round-trip the
+  original report was about.
+
+Note: the two fonts in data/processed/fonts/ are artefacts of this
+verification. They are legitimate imported fonts and are referenced by
+the settings document, so deleting them without also editing that
+reference would leave a broken restore.
+
+Not cleaned: the embedded blobs remain in git history. Removing them
+needs a history rewrite, not worth it for ~1MB here.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
