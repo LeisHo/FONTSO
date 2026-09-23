@@ -44,6 +44,9 @@ function resolveRepo() {
     return owner && slug ? `${owner}/${slug}` : '';
 }
 
+// How many times a 409 (stale blob sha) is re-read and retried.
+const PUT_RETRIES = 4;
+
 const DEFAULT_BRANCH = 'main';
 const DEFAULT_PATH = 'data/processed/dev-panel-settings.json';
 
@@ -164,10 +167,24 @@ module.exports = async (req, res) => {
     // Create-or-update one file. The Contents API needs the existing blob
     // sha to update and fails without it on an existing file, so the sha is
     // looked up first; a 404 there simply means "create".
-    async function putFile(filePath, contentBase64, message) {
+    // RETRIED ON 409. The Contents API needs the file's current blob sha
+    // to update it, so this is unavoidably a read-then-write: look up the
+    // sha, then PUT with it. If anything else commits to that path in
+    // between, GitHub rejects the PUT with
+    //   409 "is at <actual> but expected <ours>"
+    // and without a retry that is a permanent failure for an ordinary,
+    // entirely expected race - two tabs, two devices, or a batch of
+    // files whose earlier writes moved the branch under the later ones.
+    //
+    // The remedy is simply to re-read the sha and try again: a 409 means
+    // our sha was stale, not that the write was wrong. Attempts are
+    // bounded so a genuinely contended path fails with a real message
+    // instead of looping, and the delay grows between tries so two
+    // clients racing each other do not stay in lockstep.
+    async function putFile(filePath, contentBase64, message, attempt = 0) {
         const url = `https://api.github.com/repos/${repo}/contents/${filePath}`;
         let sha;
-        const head = await fetch(`${url}?ref=${encodeURIComponent(branch)}`, { headers });
+        const head = await fetch(`${url}?ref=${encodeURIComponent(branch)}`, { headers, cache: 'no-store' });
         if (head.ok) {
             const d = await head.json();
             sha = d.sha;
@@ -179,7 +196,17 @@ module.exports = async (req, res) => {
             headers,
             body: JSON.stringify({ message, content: contentBase64, branch, ...(sha ? { sha } : {}) }),
         });
-        if (!put.ok) return { ok: false, error: `${put.status}: ${await put.text()}` };
+        if (put.status === 409 && attempt < PUT_RETRIES) {
+            await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+            return putFile(filePath, contentBase64, message, attempt + 1);
+        }
+        if (!put.ok) {
+            const text = await put.text();
+            const suffix = put.status === 409
+                ? ` (still conflicting after ${PUT_RETRIES + 1} attempts - something else is writing this path)`
+                : '';
+            return { ok: false, error: `${put.status}: ${text}${suffix}` };
+        }
         const d = await put.json();
         return { ok: true, commitSha: d.commit && d.commit.sha };
     }
