@@ -37,12 +37,6 @@
       "path": "data/processed/fonts/alienware_caret_font.ttf"
     },
     {
-      "key": "aoyagireisyosimo2-Regular",
-      "fileName": "aoyagireisyosimo2 Regular.ttf",
-      "size": 4412684,
-      "path": "data/processed/fonts/aoyagireisyosimo2 Regular.ttf"
-    },
-    {
       "key": "Brown-Chunkers-DEMO",
       "fileName": "Brown Chunkers DEMO.ttf",
       "size": 48688,
@@ -101,6 +95,12 @@
       "fileName": "yafangmeigong14_1.ttf",
       "size": 2346800,
       "path": "data/processed/fonts/yafangmeigong14_1.ttf"
+    },
+    {
+      "key": "Cousine-Regular",
+      "fileName": "Cousine-Regular.ttf",
+      "size": 296856,
+      "path": "data/processed/fonts/Cousine-Regular.ttf"
     }
   ],
   "devPanel": {
@@ -121,16 +121,16 @@
       "checkboxLayerNodes": true,
       "checkboxLayerTraversal": false,
       "checkboxLayerConnectors": true,
-      "checkboxLayerOrder": true,
-      "checkboxLayerRoutePoints": false,
-      "checkboxLayerRouteOrder": false,
+      "checkboxLayerOrder": false,
+      "checkboxLayerRoutePoints": true,
+      "checkboxLayerRouteOrder": true,
       "checkboxLayerDot": true,
       "checkboxLayerTween": true,
       "checkboxPathThicknessEnabled": true,
-      "sliderPathThickness": 6,
+      "sliderPathThickness": 6.5,
       "colorPathColor": "#31d67a",
       "checkboxProgressiveThickness": true,
-      "checkboxAdaptiveThickness": true,
+      "checkboxAdaptiveThickness": false,
       "checkboxStrokeRoundCap": true,
       "checkboxPathTweenEnabled": true,
       "sliderTweenProgression": 0.72,
@@ -149,8 +149,8 @@
       "sliderTweenJoinMiterLimit": 20,
       "selectAnimationPath": "tween",
       "checkboxAnimLoop": true,
-      "sliderAnimSpeed": 130,
-      "sliderAnimScrub": 0,
+      "sliderAnimSpeed": 20,
+      "sliderAnimScrub": 592,
       "sliderRasterPadding": 5,
       "sliderAlphaThreshold": 240,
       "selectThinningAlgorithm": "guo-hall",
@@ -3252,14 +3252,14 @@
       "desktop:Path Data (JSON)": true,
       "desktop:View": true,
       "desktop:Layers": true,
-      "desktop:Font & Character": true,
-      "desktop:Text": true,
+      "desktop:Font & Character": false,
+      "desktop:Text": false,
       "desktop:Skeletonisation": true,
       "desktop:Rasterisation": true,
-      "desktop:Path": true,
+      "desktop:Path": false,
       "desktop:Cleanup": true,
       "desktop:Path Tween": true,
-      "desktop:Animation": true,
+      "desktop:Animation": false,
       "desktop:Traversal": true,
       "mobile:Dev Panel": false,
       "mobile:MECHANICS": false,
@@ -3555,7 +3555,7 @@
       }
     ]
   },
-  "lastSaveStamp": "1790159118231-0uvwq26y",
+  "lastSaveStamp": "1790501042366-as8k7426",
   "fontSettings": {
     "Gelasio-Regular": {
       "memory": {
@@ -3739,6 +3739,261 @@
           "pathColor": "#31d67a",
           "progressiveThickness": true,
           "adaptiveThickness": true,
+          "strokeRoundCap": true
+        },
+        "tween": {
+          "enabled": true,
+          "progression": 0.72,
+          "radiusScale": 0.73,
+          "radiusSmoothing": 12,
+          "normalSmoothing": 12,
+          "resampleSpacingPx": 3,
+          "extendTerminalsPx": 0,
+          "bothSides": true,
+          "joinIntersections": true,
+          "joinStyle": "auto",
+          "joinSharpAngleDeg": 0,
+          "joinCornerRadiusPx": 4.5,
+          "joinMiterLimit": 20,
+          "joinProximityPx": 9,
+          "loopSingleCurves": false
+        }
+      },
+      "presets": []
+    },
+    "PinballWhizNF": {
+      "memory": {
+        "config": {
+          "rasterEmHeight": 256,
+          "wrapWidthPx": 4000,
+          "lineHeightEm": 3,
+          "useKerning": true,
+          "letterSpacingUnits": 0,
+          "rasterPadding": 5,
+          "alphaThreshold": 240,
+          "thinningAlgorithm": "guo-hall",
+          "removeRedundantPixels": true,
+          "maxThinningIterations": 2000,
+          "removeIsolatedPixels": true,
+          "minSourceAreaPx": 0,
+          "minBranchLengthPx": 0,
+          "pruneIterations": 8,
+          "mergeAdjacentJunctions": true,
+          "simplifyTolerancePx": 1.3,
+          "smoothingPasses": 6,
+          "smoothingStrength": 1,
+          "preserveEndpointsWhileSmoothing": true
+        },
+        "view": {
+          "pathThicknessEnabled": true,
+          "pathThicknessPx": 6,
+          "pathColor": "#31d67a",
+          "progressiveThickness": true,
+          "adaptiveThickness": true,
+          "strokeRoundCap": true
+        },
+        "tween": {
+          "enabled": true,
+          "progression": 0.72,
+          "radiusScale": 0.73,
+          "radiusSmoothing": 12,
+          "normalSmoothing": 12,
+          "resampleSpacingPx": 3,
+          "extendTerminalsPx": 0,
+          "bothSides": true,
+          "joinIntersections": true,
+          "joinStyle": "auto",
+          "joinSharpAngleDeg": 0,
+          "joinCornerRadiusPx": 4.5,
+          "joinMiterLimit": 20,
+          "joinProximityPx": 9,
+          "loopSingleCurves": false
+        }
+      },
+      "presets": []
+    },
+    "PressStart2P-Regular": {
+      "memory": {
+        "config": {
+          "rasterEmHeight": 256,
+          "wrapWidthPx": 4000,
+          "lineHeightEm": 3,
+          "useKerning": true,
+          "letterSpacingUnits": 0,
+          "rasterPadding": 5,
+          "alphaThreshold": 240,
+          "thinningAlgorithm": "guo-hall",
+          "removeRedundantPixels": true,
+          "maxThinningIterations": 2000,
+          "removeIsolatedPixels": true,
+          "minSourceAreaPx": 0,
+          "minBranchLengthPx": 0,
+          "pruneIterations": 8,
+          "mergeAdjacentJunctions": true,
+          "simplifyTolerancePx": 1.3,
+          "smoothingPasses": 6,
+          "smoothingStrength": 1,
+          "preserveEndpointsWhileSmoothing": true
+        },
+        "view": {
+          "pathThicknessEnabled": true,
+          "pathThicknessPx": 6,
+          "pathColor": "#31d67a",
+          "progressiveThickness": true,
+          "adaptiveThickness": true,
+          "strokeRoundCap": true
+        },
+        "tween": {
+          "enabled": true,
+          "progression": 0.72,
+          "radiusScale": 0.73,
+          "radiusSmoothing": 12,
+          "normalSmoothing": 12,
+          "resampleSpacingPx": 3,
+          "extendTerminalsPx": 0,
+          "bothSides": true,
+          "joinIntersections": true,
+          "joinStyle": "auto",
+          "joinSharpAngleDeg": 0,
+          "joinCornerRadiusPx": 4.5,
+          "joinMiterLimit": 20,
+          "joinProximityPx": 9,
+          "loopSingleCurves": false
+        }
+      },
+      "presets": []
+    },
+    "Cousine-Regular": {
+      "memory": {
+        "config": {
+          "rasterEmHeight": 256,
+          "wrapWidthPx": 4000,
+          "lineHeightEm": 3,
+          "useKerning": true,
+          "letterSpacingUnits": 0,
+          "rasterPadding": 5,
+          "alphaThreshold": 240,
+          "thinningAlgorithm": "guo-hall",
+          "removeRedundantPixels": true,
+          "maxThinningIterations": 2000,
+          "removeIsolatedPixels": true,
+          "minSourceAreaPx": 0,
+          "minBranchLengthPx": 0,
+          "pruneIterations": 8,
+          "mergeAdjacentJunctions": true,
+          "simplifyTolerancePx": 1.3,
+          "smoothingPasses": 6,
+          "smoothingStrength": 1,
+          "preserveEndpointsWhileSmoothing": true
+        },
+        "view": {
+          "pathThicknessEnabled": true,
+          "pathThicknessPx": 6,
+          "pathColor": "#31d67a",
+          "progressiveThickness": true,
+          "adaptiveThickness": true,
+          "strokeRoundCap": true
+        },
+        "tween": {
+          "enabled": true,
+          "progression": 0.72,
+          "radiusScale": 0.73,
+          "radiusSmoothing": 12,
+          "normalSmoothing": 12,
+          "resampleSpacingPx": 3,
+          "extendTerminalsPx": 0,
+          "bothSides": true,
+          "joinIntersections": true,
+          "joinStyle": "auto",
+          "joinSharpAngleDeg": 0,
+          "joinCornerRadiusPx": 4.5,
+          "joinMiterLimit": 20,
+          "joinProximityPx": 9,
+          "loopSingleCurves": false
+        }
+      },
+      "presets": []
+    },
+    "ComicNeue-Regular": {
+      "memory": {
+        "config": {
+          "rasterEmHeight": 256,
+          "wrapWidthPx": 4000,
+          "lineHeightEm": 3,
+          "useKerning": true,
+          "letterSpacingUnits": 0,
+          "rasterPadding": 5,
+          "alphaThreshold": 240,
+          "thinningAlgorithm": "guo-hall",
+          "removeRedundantPixels": true,
+          "maxThinningIterations": 2000,
+          "removeIsolatedPixels": true,
+          "minSourceAreaPx": 0,
+          "minBranchLengthPx": 0,
+          "pruneIterations": 8,
+          "mergeAdjacentJunctions": true,
+          "simplifyTolerancePx": 1.3,
+          "smoothingPasses": 6,
+          "smoothingStrength": 1,
+          "preserveEndpointsWhileSmoothing": true
+        },
+        "view": {
+          "pathThicknessEnabled": true,
+          "pathThicknessPx": 6,
+          "pathColor": "#31d67a",
+          "progressiveThickness": true,
+          "adaptiveThickness": true,
+          "strokeRoundCap": true
+        },
+        "tween": {
+          "enabled": true,
+          "progression": 0.72,
+          "radiusScale": 0.73,
+          "radiusSmoothing": 12,
+          "normalSmoothing": 12,
+          "resampleSpacingPx": 3,
+          "extendTerminalsPx": 0,
+          "bothSides": true,
+          "joinIntersections": true,
+          "joinStyle": "auto",
+          "joinSharpAngleDeg": 0,
+          "joinCornerRadiusPx": 4.5,
+          "joinMiterLimit": 20,
+          "joinProximityPx": 9,
+          "loopSingleCurves": false
+        }
+      },
+      "presets": []
+    },
+    "AesteraPersonaluse": {
+      "memory": {
+        "config": {
+          "rasterEmHeight": 256,
+          "wrapWidthPx": 4000,
+          "lineHeightEm": 3,
+          "useKerning": true,
+          "letterSpacingUnits": 0,
+          "rasterPadding": 5,
+          "alphaThreshold": 240,
+          "thinningAlgorithm": "guo-hall",
+          "removeRedundantPixels": true,
+          "maxThinningIterations": 2000,
+          "removeIsolatedPixels": true,
+          "minSourceAreaPx": 0,
+          "minBranchLengthPx": 0,
+          "pruneIterations": 8,
+          "mergeAdjacentJunctions": true,
+          "simplifyTolerancePx": 1.3,
+          "smoothingPasses": 6,
+          "smoothingStrength": 1,
+          "preserveEndpointsWhileSmoothing": true
+        },
+        "view": {
+          "pathThicknessEnabled": true,
+          "pathThicknessPx": 6.5,
+          "pathColor": "#31d67a",
+          "progressiveThickness": true,
+          "adaptiveThickness": false,
           "strokeRoundCap": true
         },
         "tween": {
