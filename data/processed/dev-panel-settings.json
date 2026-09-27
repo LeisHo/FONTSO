@@ -150,7 +150,7 @@
       "selectAnimationPath": "tween",
       "checkboxAnimLoop": true,
       "sliderAnimSpeed": 20,
-      "sliderAnimScrub": 592,
+      "sliderAnimScrub": 644,
       "sliderRasterPadding": 5,
       "sliderAlphaThreshold": 240,
       "selectThinningAlgorithm": "guo-hall",
@@ -3246,20 +3246,20 @@
       "desktop:Setting Title": true,
       "desktop:TABS": true,
       "desktop:BUTTONS": true,
-      "desktop:Debug": true,
+      "desktop:Debug": false,
       "desktop:Mouse Log": true,
       "desktop:Pipeline Report": true,
       "desktop:Path Data (JSON)": true,
       "desktop:View": true,
       "desktop:Layers": true,
-      "desktop:Font & Character": false,
-      "desktop:Text": false,
+      "desktop:Font & Character": true,
+      "desktop:Text": true,
       "desktop:Skeletonisation": true,
       "desktop:Rasterisation": true,
-      "desktop:Path": false,
+      "desktop:Path": true,
       "desktop:Cleanup": true,
       "desktop:Path Tween": true,
-      "desktop:Animation": false,
+      "desktop:Animation": true,
       "desktop:Traversal": true,
       "mobile:Dev Panel": false,
       "mobile:MECHANICS": false,
@@ -3555,7 +3555,7 @@
       }
     ]
   },
-  "lastSaveStamp": "1790501042366-as8k7426",
+  "lastSaveStamp": "1790501056721-3l79abbv",
   "fontSettings": {
     "Gelasio-Regular": {
       "memory": {
